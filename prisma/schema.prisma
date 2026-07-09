@@ -1,0 +1,13 @@
+// SignalForge — Prisma schema
+// NOTE: This is the Phase 1 skeleton only (datasource + generator).
+// Full data models (User, Signal, MarketData, etc.) are defined in Phase 2.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
