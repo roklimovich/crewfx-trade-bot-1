@@ -5,18 +5,18 @@
 /* SignalForge dark / glassmorphism theme tokens
    Chosen to match a violet-on-near-black trading-platform aesthetic. */
 :root {
-  --background: 250 40% 4%;
-  --foreground: 210 20% 96%;
-  --card: 250 30% 8%;
-  --border: 250 20% 18%;
-  --primary: 262 83% 66%;
+  --background: 264 45% 5%;
+  --foreground: 250 25% 95%;
+  --card: 260 35% 9%;
+  --border: 260 22% 20%;
+  --primary: 248 100% 71%;
   --primary-foreground: 0 0% 100%;
-  --accent: 280 90% 70%;
+  --accent: 305 74% 68%;
   --accent-foreground: 0 0% 100%;
-  --success: 152 60% 50%;
-  --danger: 0 84% 63%;
-  --muted: 250 15% 14%;
-  --muted-foreground: 220 10% 65%;
+  --success: 154 62% 55%;
+  --danger: 0 100% 71%;
+  --muted: 260 20% 13%;
+  --muted-foreground: 255 18% 72%;
   --radius: 1rem;
 }
 

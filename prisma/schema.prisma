@@ -1,6 +1,4 @@
-// SignalForge — Prisma schema
-// NOTE: This is the Phase 1 skeleton only (datasource + generator).
-// Full data models (User, Signal, MarketData, etc.) are defined in Phase 2.
+// SignalForge — Prisma schema (Phase 2: Database Design)
 
 generator client {
   provider = "prisma-client-js"
@@ -10,4 +8,394 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// ENUMS
+// ---------------------------------------------------------------------------
+
+enum RoleName {
+  ADMIN
+  MODERATOR
+  USER
+}
+
+enum UserStatus {
+  PENDING // awaiting admin approval (e.g. Pocket Option ID submitted, not verified)
+  ACTIVE
+  REJECTED
+  BLOCKED
+}
+
+enum SignalDirection {
+  BUY
+  SELL
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum SignalStatus {
+  PENDING // generated, not yet active (e.g. waiting for entry window)
+  ACTIVE
+  EXPIRED
+  WON
+  LOST
+  CANCELLED
+}
+
+enum SignalOutcome {
+  PENDING
+  WIN
+  LOSS
+  BREAK_EVEN
+}
+
+enum IndicatorType {
+  RSI
+  EMA
+  SMA
+  MACD
+  ATR
+  ADX
+  CCI
+  VWAP
+  BOLLINGER_BANDS
+  STOCHASTIC
+  PIVOT_POINTS
+}
+
+enum Timeframe {
+  M1
+  M5
+  M15
+  M30
+  H1
+  H4
+  D1
+}
+
+enum NotificationChannel {
+  EMAIL
+  TELEGRAM
+  PUSH
+  BROWSER
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  READ
+}
+
+enum LogLevel {
+  INFO
+  WARN
+  ERROR
+  SECURITY
+}
+
+enum AdminActionType {
+  APPROVE_USER
+  REJECT_USER
+  BLOCK_USER
+  UNBLOCK_USER
+  CHANGE_ROLE
+  UPDATE_SETTING
+  DELETE_SIGNAL
+  IMPERSONATE
+}
+
+enum VerificationTokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+// ---------------------------------------------------------------------------
+// AUTH / USERS
+// ---------------------------------------------------------------------------
+
+/// Roles as a table (not a bare enum) so permissions can evolve without a migration.
+model Role {
+  id          String   @id @default(cuid())
+  name        RoleName @unique
+  permissions Json     @default("[]") // e.g. ["signals:read", "users:approve"]
+  createdAt   DateTime @default(now())
+
+  users User[]
+
+  @@map("roles")
+}
+
+model User {
+  id               String     @id @default(cuid())
+  email            String     @unique
+  emailVerified    DateTime?
+  passwordHash     String
+  name             String?
+  status           UserStatus @default(PENDING)
+  roleId           String
+  role             Role       @relation(fields: [roleId], references: [id])
+  twoFactorEnabled Boolean    @default(false)
+  twoFactorSecret  String?
+
+  referredById String?
+  referredBy   User?  @relation("Referrals", fields: [referredById], references: [id], onDelete: SetNull)
+  referrals    User[] @relation("Referrals")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions             Session[]
+  pocketOptionAccounts PocketOptionAccount[]
+  telegramAccount      TelegramAccount?
+  notifications        Notification[]
+  logs                 Log[]
+  settingsUpdated      Setting[]
+  adminActionsTaken    AdminAction[]         @relation("AdminActor")
+  adminActionsOn       AdminAction[]         @relation("AdminTarget")
+  verificationTokens   VerificationToken[]
+
+  @@index([status])
+  @@index([roleId])
+  @@map("users")
+}
+
+/// Refresh-token sessions — lets admins revoke a specific device/session.
+model Session {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash String    @unique
+  userAgent        String?
+  ipAddress        String?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+/// Users submit a Pocket Option account ID for verification/binding — never credentials.
+model PocketOptionAccount {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId   String // Pocket Option's own account/user ID, as submitted by the user
+  verified    Boolean   @default(false)
+  submittedAt DateTime  @default(now())
+  verifiedAt  DateTime?
+
+  @@unique([userId, accountId])
+  @@index([verified])
+  @@map("pocket_option_accounts")
+}
+
+model TelegramAccount {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  telegramId String   @unique // Telegram numeric user id, stored as string
+  username   String?
+  chatId     String   @unique // for sending bot messages
+  linkedAt   DateTime @default(now())
+
+  @@map("telegram_accounts")
+}
+
+// ---------------------------------------------------------------------------
+// MARKET DATA / INDICATORS
+// ---------------------------------------------------------------------------
+
+/// Raw OHLCV candles per pair + timeframe. This is the source of truth the
+/// signal engine and indicator calculations read from.
+model MarketData {
+  id        String    @id @default(cuid())
+  pair      String // e.g. "EUR/USD"
+  timeframe Timeframe
+  open      Float
+  high      Float
+  low       Float
+  close     Float
+  volume    Float     @default(0)
+  timestamp DateTime // candle open time
+
+  createdAt DateTime @default(now())
+
+  @@unique([pair, timeframe, timestamp])
+  @@index([pair, timeframe, timestamp])
+  @@map("market_data")
+}
+
+/// Calculated indicator values, snapshotted per pair/timeframe/time so the
+/// signal engine (and later audits) can see exactly what data justified a signal.
+model Indicator {
+  id        String        @id @default(cuid())
+  pair      String
+  timeframe Timeframe
+  type      IndicatorType
+  /// Flexible payload: a single float for RSI/ATR, or a structured object for
+  /// multi-value indicators (MACD: {macd, signal, histogram}; Bollinger: {upper, middle, lower}).
+  value     Json
+  timestamp DateTime // aligned to the candle it was calculated from
+
+  createdAt DateTime @default(now())
+
+  signals Signal[] @relation("SignalIndicators")
+
+  @@unique([pair, timeframe, type, timestamp])
+  @@index([pair, timeframe, type])
+  @@map("indicators")
+}
+
+// ---------------------------------------------------------------------------
+// SIGNALS
+// ---------------------------------------------------------------------------
+
+model Signal {
+  id                String          @id @default(cuid())
+  pair              String
+  direction         SignalDirection
+  entryPrice        Float
+  confidenceScore   Float // 0–100, engine-computed
+  expirationTime    DateTime
+  technicalSummary  String          @db.Text
+  riskLevel         RiskLevel
+  timeframe         Timeframe
+  status            SignalStatus    @default(PENDING)
+  engineVersion     String // which rule-set/version generated this, for audit/backtesting
+
+  indicatorsUsed Indicator[]     @relation("SignalIndicators")
+  aiAnalysis     AIAnalysis?
+  history        SignalHistory?
+  notifications  Notification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([pair, createdAt])
+  @@index([status])
+  @@map("signals")
+}
+
+/// Outcome tracking, kept separate from Signal so the signal record stays
+/// immutable (what was predicted) vs. history (what actually happened).
+model SignalHistory {
+  id         String        @id @default(cuid())
+  signalId   String        @unique
+  signal     Signal        @relation(fields: [signalId], references: [id], onDelete: Cascade)
+  outcome    SignalOutcome @default(PENDING)
+  closePrice Float?
+  pnlPips    Float?
+  closedAt   DateTime?
+  createdAt  DateTime      @default(now())
+
+  @@index([outcome])
+  @@map("signal_history")
+}
+
+/// LLM-generated, human-readable explanation of a rule-based signal.
+/// Never the source of the signal itself — see Phase 9.
+model AIAnalysis {
+  id                 String   @id @default(cuid())
+  signalId           String   @unique
+  signal             Signal   @relation(fields: [signalId], references: [id], onDelete: Cascade)
+  summary            String   @db.Text
+  reasoning          String   @db.Text
+  riskHighlights     String   @db.Text
+  confidenceEstimate Float
+  model              String // e.g. "claude-sonnet-4-6"
+  createdAt          DateTime @default(now())
+
+  @@map("ai_analyses")
+}
+
+// ---------------------------------------------------------------------------
+// NOTIFICATIONS
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id        String              @id @default(cuid())
+  userId    String
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  signalId  String?
+  signal    Signal?             @relation(fields: [signalId], references: [id], onDelete: SetNull)
+  channel   NotificationChannel
+  title     String
+  body      String              @db.Text
+  status    NotificationStatus  @default(PENDING)
+  sentAt    DateTime?
+  readAt    DateTime?
+  createdAt DateTime            @default(now())
+
+  @@index([userId, status])
+  @@index([signalId])
+  @@map("notifications")
+}
+
+// ---------------------------------------------------------------------------
+// PLATFORM: LOGS, SETTINGS, ADMIN ACTIONS
+// ---------------------------------------------------------------------------
+
+model Log {
+  id        String   @id @default(cuid())
+  level     LogLevel
+  message   String
+  context   Json? // structured metadata: route, ip, statusCode, etc.
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+
+  @@index([level, createdAt])
+  @@index([userId])
+  @@map("logs")
+}
+
+/// Global, admin-editable key/value app settings (feature flags, thresholds, etc.)
+model Setting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       Json
+  updatedById String?
+  updatedBy   User?    @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+  updatedAt   DateTime @updatedAt
+
+  @@map("settings")
+}
+
+model AdminAction {
+  id           String          @id @default(cuid())
+  adminId      String
+  admin        User            @relation("AdminActor", fields: [adminId], references: [id], onDelete: Cascade)
+  actionType   AdminActionType
+  targetUserId String?
+  targetUser   User?           @relation("AdminTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+  notes        String?         @db.Text
+  createdAt    DateTime        @default(now())
+
+  @@index([adminId, createdAt])
+  @@index([targetUserId])
+  @@map("admin_actions")
+}
+
+/// Single-use, revocable tokens for email verification and password reset.
+/// We store only a hash of the token (never the raw value) — same pattern as Session.refreshTokenHash.
+model VerificationToken {
+  id        String                @id @default(cuid())
+  userId    String
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String                @unique
+  type      VerificationTokenType
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime              @default(now())
+
+  @@index([userId, type])
+  @@map("verification_tokens")
 }

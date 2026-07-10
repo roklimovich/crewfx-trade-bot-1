@@ -1,21 +1,21 @@
-# CrewFX Trade Bot — Phase 1: Architecture
+# SignalForge — Phase 1: Architecture
 
 Informational technical-analysis signal platform for Forex & OTC markets.
 Signals are informational only — the platform never places trades automatically.
 
 ## Tech Stack & Why
 
-| Layer | Choice | Reason |
-|---|---|---|
-| Framework | Next.js 14 (App Router) | Single codebase for marketing site, dashboard, admin panel, and API routes. Server components cut client JS for data-heavy screens (signal feed, analytics). |
-| Language | TypeScript (strict) | Signal payloads, indicator math, and financial data need strong typing — a wrong `number vs string` on a price field is a real bug, not a nuisance. |
-| Styling | Tailwind CSS + shadcn/ui | Utility CSS for speed, shadcn for accessible unstyled primitives we can restyle into the dark/glass look from your reference. |
-| ORM / DB | Prisma + PostgreSQL | Relational data (users, signals, indicators, history) benefits from real joins/constraints; Prisma gives type-safe queries end-to-end. |
-| Cache / Realtime backbone | Redis | Rate limiting, session/refresh-token blacklists, caching indicator calculations, and pub/sub for pushing live signals to connected clients. |
-| Auth | JWT (access + refresh) via `jose`, bcrypt for password hashing | Stateless access tokens for API/mobile-friendliness, rotating refresh tokens stored server-side so we can revoke sessions (needed for admin "block user"). |
-| AI layer | Anthropic SDK | Used only in Phase 9 to *explain* rule-based signals in plain language — never to generate the signal itself. |
-| Testing | Jest (unit/integration) + Playwright (E2E) | Standard, well-supported combo for this stack. |
-| Deployment | Vercel + managed Postgres/Redis | Matches the Next.js App Router deployment model; `vercel.json` runs `prisma generate` on build. |
+| Layer                     | Choice                                                         | Reason                                                                                                                                                       |
+| ------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Framework                 | Next.js 14 (App Router)                                        | Single codebase for marketing site, dashboard, admin panel, and API routes. Server components cut client JS for data-heavy screens (signal feed, analytics). |
+| Language                  | TypeScript (strict)                                            | Signal payloads, indicator math, and financial data need strong typing — a wrong `number vs string` on a price field is a real bug, not a nuisance.          |
+| Styling                   | Tailwind CSS + shadcn/ui                                       | Utility CSS for speed, shadcn for accessible unstyled primitives we can restyle into the dark/glass look from your reference.                                |
+| ORM / DB                  | Prisma + PostgreSQL                                            | Relational data (users, signals, indicators, history) benefits from real joins/constraints; Prisma gives type-safe queries end-to-end.                       |
+| Cache / Realtime backbone | Redis                                                          | Rate limiting, session/refresh-token blacklists, caching indicator calculations, and pub/sub for pushing live signals to connected clients.                  |
+| Auth                      | JWT (access + refresh) via `jose`, bcrypt for password hashing | Stateless access tokens for API/mobile-friendliness, rotating refresh tokens stored server-side so we can revoke sessions (needed for admin "block user").   |
+| AI layer                  | Anthropic SDK                                                  | Used only in Phase 9 to _explain_ rule-based signals in plain language — never to generate the signal itself.                                                |
+| Testing                   | Jest (unit/integration) + Playwright (E2E)                     | Standard, well-supported combo for this stack.                                                                                                               |
+| Deployment                | Vercel + managed Postgres/Redis                                | Matches the Next.js App Router deployment model; `vercel.json` runs `prisma generate` on build.                                                              |
 
 ## Application Layers (Clean Architecture)
 
