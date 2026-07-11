@@ -45,7 +45,8 @@ export async function logAdminAction(params: {
     | 'CHANGE_ROLE'
     | 'UPDATE_SETTING'
     | 'DELETE_SIGNAL'
-    | 'IMPERSONATE';
+    | 'IMPERSONATE'
+    | 'VERIFY_POCKET_OPTION';
   targetUserId?: string;
   notes?: string;
 }): Promise<void> {

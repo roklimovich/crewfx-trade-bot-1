@@ -108,6 +108,7 @@ enum AdminActionType {
   UPDATE_SETTING
   DELETE_SIGNAL
   IMPERSONATE
+  VERIFY_POCKET_OPTION
 }
 
 enum VerificationTokenType {
