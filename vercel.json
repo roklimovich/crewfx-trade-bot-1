@@ -11,5 +11,11 @@
         { "key": "X-Frame-Options", "value": "SAMEORIGIN" }
       ]
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/market-data/ingest",
+      "schedule": "*/5 * * * *"
+    }
   ]
 }

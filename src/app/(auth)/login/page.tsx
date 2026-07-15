@@ -17,7 +17,7 @@ export default function LoginPage() {
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirect') || '/dashboard';
+  const explicitRedirect = searchParams.get('redirect'); // only set when middleware bounced them from a protected page
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,11 +31,20 @@ function LoginForm() {
     setError(null);
     setLoading(true);
     try {
-      await apiFetch('/api/auth/login', {
+      const res = await apiFetch<{
+        user: { id: string; email: string; role: 'ADMIN' | 'MODERATOR' | 'USER' };
+      }>('/api/auth/login', {
         method: 'POST',
         body: { email, password, twoFactorToken: needsTwoFactor ? twoFactorToken : undefined },
       });
-      router.push(redirectTo);
+
+      // Respect an explicit redirect (e.g. middleware sent them to /login?redirect=/dashboard/settings).
+      // Otherwise, admins/moderators land on the admin panel and everyone else lands on the dashboard.
+      const destination =
+        explicitRedirect ??
+        (res.user.role === 'ADMIN' || res.user.role === 'MODERATOR' ? '/admin' : '/dashboard');
+
+      router.push(destination);
       router.refresh();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401 && err.message === '2FA_REQUIRED') {

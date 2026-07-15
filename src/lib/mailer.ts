@@ -1,19 +1,10 @@
-import nodemailer from 'nodemailer';
-
-function getTransport() {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT ?? 587),
-    secure: Number(process.env.SMTP_PORT ?? 587) === 465,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
-  });
-}
+import { getMailTransport } from './mail-transport';
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
 export async function sendVerificationEmail(to: string, token: string): Promise<void> {
   const link = `${appUrl}/verify-email?token=${token}`;
-  await getTransport().sendMail({
+  await getMailTransport().sendMail({
     from: process.env.EMAIL_FROM,
     to,
     subject: 'Verify your SignalForge email',
@@ -23,7 +14,7 @@ export async function sendVerificationEmail(to: string, token: string): Promise<
 
 export async function sendPasswordResetEmail(to: string, token: string): Promise<void> {
   const link = `${appUrl}/reset-password?token=${token}`;
-  await getTransport().sendMail({
+  await getMailTransport().sendMail({
     from: process.env.EMAIL_FROM,
     to,
     subject: 'Reset your SignalForge password',

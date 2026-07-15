@@ -6,6 +6,7 @@ import { apiFetch } from '@/lib/api-client';
 import { ProfileSection } from '@/components/dashboard/settings/profile-section';
 import { PocketOptionSection } from '@/components/dashboard/settings/pocket-option-section';
 import { TelegramSection } from '@/components/dashboard/settings/telegram-section';
+import { PushNotificationsSection } from '@/components/dashboard/settings/push-notifications-section';
 import { TwoFactorSection } from '@/components/dashboard/settings/two-factor-section';
 
 interface MeResponse {
@@ -70,6 +71,8 @@ export default function SettingsPage() {
           )
         }
       />
+
+      <PushNotificationsSection />
 
       {profile.role === 'ADMIN' && (
         <TwoFactorSection

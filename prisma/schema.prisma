@@ -155,6 +155,7 @@ model User {
   pocketOptionAccounts PocketOptionAccount[]
   telegramAccount      TelegramAccount?
   notifications        Notification[]
+  pushSubscriptions    PushSubscription[]
   logs                 Log[]
   settingsUpdated      Setting[]
   adminActionsTaken    AdminAction[]         @relation("AdminActor")
@@ -298,6 +299,7 @@ model SignalHistory {
   createdAt  DateTime      @default(now())
 
   @@index([outcome])
+  @@index([closedAt])
   @@map("signal_history")
 }
 
@@ -399,4 +401,19 @@ model VerificationToken {
 
   @@index([userId, type])
   @@map("verification_tokens")
+}
+
+/// A browser's Web Push subscription (Phase 10). One user can have several — one per
+/// browser/device they've enabled push on.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String // subscription encryption key
+  auth      String // subscription auth secret
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("push_subscriptions")
 }

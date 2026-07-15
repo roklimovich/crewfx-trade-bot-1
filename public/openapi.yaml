@@ -1,0 +1,836 @@
+openapi: 3.0.3
+info:
+  title: SignalForge API
+  version: "1.0.0"
+  description: |
+    REST API for SignalForge — technical-analysis trading signals for Forex and OTC markets.
+
+    ## Authentication
+    Two ways to authenticate, both accepted by every protected endpoint:
+    - **Cookie** (browser clients): `sf_access`, an HTTP-only JWT set by `/auth/login`. Refreshed via `/auth/refresh` using the paired `sf_refresh` cookie.
+    - **Bearer token** (API/mobile clients): `Authorization: Bearer <access_token>` — the same JWT, obtained from `/auth/login`'s response body is not returned there today (cookie-only); API clients should extract the token from the `sf_access` cookie on the login response, or a future token-issuance endpoint.
+
+    ## CSRF
+    Any mutating request (POST/PATCH/PUT/DELETE) made from a browser must echo the `sf_csrf` cookie's value in an `X-CSRF-Token` header. This does not apply to non-browser Bearer-token clients, which don't carry the CSRF cookie in the first place. `/auth/login`, `/auth/register`, `/auth/refresh`, and `/auth/telegram` are exempt (they're what establish the CSRF cookie).
+
+    ## Errors
+    Every error response is `{ "error": "human-readable message" }` with an appropriate HTTP status code (400 invalid input, 401 unauthenticated, 403 forbidden, 404 not found, 422 semantically invalid, 429 rate-limited, 500 server error). Validation errors from some endpoints additionally include a `details` field with field-level messages.
+
+    ## Rate limits
+    Auth endpoints (login, register, password-reset request) are limited to 5 requests/minute per IP, then a 5-minute block. Exceeding this returns `429` with a `Retry-After` header.
+
+    ## Pagination
+    List endpoints that support pagination accept `page` (1-indexed) and `pageSize` query params, and return `{ items or resource-name, total, page, pageSize }`.
+  contact:
+    name: SignalForge
+servers:
+  - url: /api
+    description: Same-origin (this app's own frontend)
+  - url: https://your-domain.example/api
+    description: Production (replace with your deployed domain)
+
+tags:
+  - name: Authentication
+    description: Registration, login, session management, 2FA, account verification
+  - name: Users
+    description: The current user's own profile
+  - name: Signals
+    description: Trading signals — generation, history, filtering, export
+  - name: AI
+    description: AI-generated plain-language explanations of rule-engine signals
+  - name: Admin
+    description: User management, platform settings, logs — ADMIN/MODERATOR only
+  - name: Notifications
+    description: In-app, email, Telegram, and push notification delivery
+  - name: Analytics
+    description: Win rate and performance statistics
+  - name: Market Data
+    description: OHLCV candle ingestion and retrieval
+
+security:
+  - cookieAuth: []
+  - bearerAuth: []
+
+paths:
+  # ---------------------------------------------------------------- Authentication
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Create an account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 10, description: "10+ chars, upper, lower, digit" }
+                name: { type: string, minLength: 2, maxLength: 80 }
+                referralCode: { type: string, description: "Referring user's ID" }
+      responses:
+        "201": { description: "Registered — verification email sent, status PENDING until admin approval" }
+        "200": { description: "Generic success (also returned if the email already exists, to avoid enumeration)" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Log in
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+                twoFactorToken: { type: string, minLength: 6, maxLength: 6, description: "Required for admins with 2FA enabled" }
+      responses:
+        "200":
+          description: Logged in — sets sf_access/sf_refresh/sf_csrf cookies
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      email: { type: string }
+                      role: { type: string, enum: [ADMIN, MODERATOR, USER] }
+        "401":
+          description: "Invalid credentials, or 2FA_REQUIRED if an admin's 2FA code is missing"
+        "403": { description: Account is BLOCKED or still PENDING admin approval }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Log out (revokes the current session)
+      responses:
+        "200": { description: "Logged out, cookies cleared" }
+
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Rotate the access/refresh token pair
+      security: []
+      description: Uses the sf_refresh cookie. Exempt from CSRF (no session established yet at the point this is needed).
+      responses:
+        "200": { description: New token pair issued }
+        "401": { description: "Refresh token missing, expired, or revoked" }
+
+  /auth/verify-email:
+    post:
+      tags: [Authentication]
+      summary: Confirm an email-verification token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties: { token: { type: string, minLength: 32 } }
+      responses:
+        "200": { description: Email verified }
+        "400": { description: "Token invalid, expired, or already used" }
+
+  /auth/password-reset/request:
+    post:
+      tags: [Authentication]
+      summary: Request a password-reset email
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties: { email: { type: string, format: email } }
+      responses:
+        "200": { description: "Generic success regardless of whether the email is registered (anti-enumeration)" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /auth/password-reset/confirm:
+    post:
+      tags: [Authentication]
+      summary: Set a new password using a reset token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, newPassword]
+              properties:
+                token: { type: string, minLength: 32 }
+                newPassword: { type: string, minLength: 10 }
+      responses:
+        "200": { description: "Password updated; every existing session for this user is revoked" }
+        "400": { description: "Token invalid/expired, or password too weak" }
+
+  /auth/pocket-option:
+    post:
+      tags: [Authentication]
+      summary: Submit a Pocket Option account ID for verification
+      description: Submits the account ID only — never credentials. An admin verifies it later (see /admin/users/{id}/verify-pocket-option).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [accountId]
+              properties: { accountId: { type: string, minLength: 3, maxLength: 64 } }
+      responses:
+        "201": { description: "Submitted, pending verification" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/telegram:
+    post:
+      tags: [Authentication]
+      summary: Telegram Login Widget callback — logs in if already linked, else links to the current session
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, first_name, auth_date, hash]
+              properties:
+                id: { type: integer }
+                first_name: { type: string }
+                username: { type: string }
+                photo_url: { type: string }
+                auth_date: { type: integer }
+                hash: { type: string }
+      responses:
+        "200": { description: "Logged in (if this Telegram ID was already linked) or linked to the current session" }
+        "401": { description: Telegram signature verification failed }
+        "404": { description: "Not linked, and no current session to link it to" }
+
+  /auth/2fa/setup:
+    post:
+      tags: [Authentication]
+      summary: Begin admin 2FA enrollment (issues a secret + QR code)
+      responses:
+        "200":
+          description: Scan the QR code, then confirm with /auth/2fa/verify
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { qrCodeDataUrl: { type: string }, secret: { type: string } }
+        "403": { description: Admin accounts only }
+
+  /auth/2fa/verify:
+    post:
+      tags: [Authentication]
+      summary: Confirm 2FA enrollment with a code from the authenticator app
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties: { token: { type: string, minLength: 6, maxLength: 6 } }
+      responses:
+        "200": { description: 2FA enabled }
+        "401": { description: Invalid code }
+
+  # ---------------------------------------------------------------- Users
+  /auth/me:
+    get:
+      tags: [Users]
+      summary: Get the current user's profile
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserProfile" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    patch:
+      tags: [Users]
+      summary: Update the current user's name
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties: { name: { type: string, minLength: 2, maxLength: 80 } }
+      responses:
+        "200": { description: Updated }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ---------------------------------------------------------------- Signals
+  /signals:
+    get:
+      tags: [Signals]
+      summary: List signals (filterable, paginated)
+      parameters:
+        - { name: pair, in: query, schema: { type: string }, example: EUR/USD }
+        - { name: direction, in: query, schema: { type: string, enum: [BUY, SELL] } }
+        - { name: status, in: query, schema: { type: string, enum: [PENDING, ACTIVE, EXPIRED, WON, LOST, CANCELLED] } }
+        - { name: dateFrom, in: query, schema: { type: string, format: date } }
+        - { name: dateTo, in: query, schema: { type: string, format: date } }
+        - { name: search, in: query, schema: { type: string }, description: Full-text match against technicalSummary }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, default: 25, maximum: 100 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  signals: { type: array, items: { $ref: "#/components/schemas/Signal" } }
+                  total: { type: integer }
+                  page: { type: integer }
+                  pageSize: { type: integer }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Account not yet ACTIVE }
+
+  /signals/export:
+    get:
+      tags: [Signals]
+      summary: Export filtered signal history as CSV
+      description: Accepts the same filters as GET /signals.
+      parameters:
+        - { name: pair, in: query, schema: { type: string } }
+        - { name: direction, in: query, schema: { type: string, enum: [BUY, SELL] } }
+        - { name: status, in: query, schema: { type: string } }
+        - { name: dateFrom, in: query, schema: { type: string, format: date } }
+        - { name: dateTo, in: query, schema: { type: string, format: date } }
+        - { name: search, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: CSV file
+          content:
+            text/csv:
+              schema: { type: string }
+
+  /signals/generate:
+    post:
+      tags: [Signals]
+      summary: Manually re-run the signal engine (ADMIN only)
+      description: Runs against already-stored market data/indicators — does not re-fetch from the provider.
+      responses:
+        "200":
+          description: Run complete
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results: { type: array, items: { $ref: "#/components/schemas/SignalGenerationResult" } }
+                  generated: { type: integer }
+                  total: { type: integer }
+        "403": { description: Admin only }
+
+  /signals/{id}/analyze:
+    post:
+      tags: [AI]
+      summary: Generate (or regenerate) AI analysis for a signal (ADMIN only)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: force, in: query, schema: { type: boolean }, description: "If true, deletes any existing analysis and regenerates" }
+      responses:
+        "200": { description: Analysis stored }
+        "403": { description: Admin only }
+        "422": { description: "Analysis was not performed (e.g. ANTHROPIC_API_KEY not configured, or model output failed validation)" }
+
+  # ---------------------------------------------------------------- Market Data
+  /market-data/candles:
+    get:
+      tags: [Market Data]
+      summary: Get stored candles + latest indicators for a pair/timeframe
+      parameters:
+        - { name: pair, in: query, required: true, schema: { type: string }, example: EUR/USD }
+        - { name: timeframe, in: query, required: true, schema: { type: string, enum: [M1, M5, M15, M30, H1, H4, D1] } }
+        - { name: limit, in: query, schema: { type: integer, default: 200, maximum: 500 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pair: { type: string }
+                  timeframe: { type: string }
+                  candles: { type: array, items: { $ref: "#/components/schemas/Candle" } }
+                  latestIndicators: { type: array, items: { $ref: "#/components/schemas/Indicator" } }
+
+  /market-data/ingest:
+    get:
+      tags: [Market Data]
+      summary: Vercel Cron entry point — fetch new candles + run the signal engine
+      security:
+        - cronSecret: []
+      description: Invoked by Vercel Cron with `Authorization Bearer <CRON_SECRET>`. Also reachable via GET by an ADMIN for manual triggering.
+      responses:
+        "200": { description: Ingestion + signal generation run complete }
+    post:
+      tags: [Market Data]
+      summary: Manually trigger ingestion + signal generation (ADMIN only)
+      responses:
+        "200": { description: Run complete }
+        "403": { description: Admin only }
+
+  # ---------------------------------------------------------------- Notifications
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: List the current user's notifications
+      parameters:
+        - { name: unreadOnly, in: query, schema: { type: boolean } }
+        - { name: limit, in: query, schema: { type: integer, default: 20, maximum: 100 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notifications: { type: array, items: { $ref: "#/components/schemas/Notification" } }
+                  unreadCount: { type: integer }
+
+  /notifications/{id}/read:
+    post:
+      tags: [Notifications]
+      summary: Mark a notification as read
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Marked read }
+        "404": { description: "Not found, or not owned by the current user" }
+
+  /notifications/stream:
+    get:
+      tags: [Notifications]
+      summary: Real-time notification stream (Server-Sent Events)
+      description: |
+        Not a typical request/response endpoint — returns a long-lived `text/event-stream`
+        connection. Events are named `notification` with a JSON payload matching the
+        RealtimeNotificationEvent schema. Reconnect automatically via the browser's
+        EventSource API; connections may be cut by serverless platform execution limits and
+        should be treated as reconnectable, not permanent.
+      responses:
+        "200":
+          description: SSE stream established
+          content:
+            text/event-stream:
+              schema: { type: string }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /notifications/push/subscribe:
+    post:
+      tags: [Notifications]
+      summary: Register a Web Push subscription for the current browser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [endpoint, keys]
+              properties:
+                endpoint: { type: string, format: uri }
+                keys:
+                  type: object
+                  required: [p256dh, auth]
+                  properties: { p256dh: { type: string }, auth: { type: string } }
+      responses:
+        "200": { description: Subscribed }
+
+  /notifications/push/unsubscribe:
+    post:
+      tags: [Notifications]
+      summary: Remove a Web Push subscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [endpoint]
+              properties: { endpoint: { type: string, format: uri } }
+      responses:
+        "200": { description: Unsubscribed }
+
+  # ---------------------------------------------------------------- Analytics
+  /analytics/summary:
+    get:
+      tags: [Analytics]
+      summary: Overall win rate + per-pair breakdown
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  overall: { $ref: "#/components/schemas/WinRateSummary" }
+                  byPair:
+                    type: array
+                    items:
+                      allOf:
+                        - type: object
+                          properties: { pair: { type: string } }
+                        - $ref: "#/components/schemas/WinRateSummary"
+                  totalSignals: { type: integer }
+                  activeSignals: { type: integer }
+
+  /analytics/performance:
+    get:
+      tags: [Analytics]
+      summary: Win rate grouped by day/week/month
+      parameters:
+        - { name: period, in: query, schema: { type: string, enum: [daily, weekly, monthly], default: daily } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  period: { type: string }
+                  buckets:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        label: { type: string, example: "2026-07-12" }
+                        winRate: { type: number, nullable: true }
+                        total: { type: integer }
+
+  # ---------------------------------------------------------------- Admin
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: List users (search, filter, paginate) — ADMIN/MODERATOR
+      parameters:
+        - { name: q, in: query, schema: { type: string }, description: Matches email or name }
+        - { name: status, in: query, schema: { type: string, enum: [PENDING, ACTIVE, REJECTED, BLOCKED] } }
+        - { name: role, in: query, schema: { type: string, enum: [ADMIN, MODERATOR, USER] } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, default: 20, maximum: 50 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users: { type: array, items: { $ref: "#/components/schemas/AdminUserSummary" } }
+                  total: { type: integer }
+                  page: { type: integer }
+                  pageSize: { type: integer }
+        "403": { description: Admin/Moderator only }
+
+  /admin/users/{id}:
+    get:
+      tags: [Admin]
+      summary: Get full user detail — ADMIN/MODERATOR
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: OK }
+        "404": { description: Not found }
+
+  /admin/users/{id}/approve:
+    post:
+      tags: [Admin]
+      summary: Approve a PENDING user — ADMIN/MODERATOR
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Approved }
+        "400": { description: "Cannot approve your own account" }
+
+  /admin/users/{id}/reject:
+    post:
+      tags: [Admin]
+      summary: Reject a PENDING user — ADMIN/MODERATOR
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { notes: { type: string } } }
+      responses:
+        "200": { description: Rejected }
+
+  /admin/users/{id}/block:
+    post:
+      tags: [Admin]
+      summary: Block a user (revokes every active session) — ADMIN/MODERATOR
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { notes: { type: string } } }
+      responses:
+        "200": { description: Blocked }
+        "400": { description: "Cannot block your own account, or already blocked" }
+
+  /admin/users/{id}/unblock:
+    post:
+      tags: [Admin]
+      summary: Unblock a user — ADMIN/MODERATOR
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Unblocked }
+        "400": { description: Not currently blocked }
+
+  /admin/users/{id}/verify-pocket-option:
+    post:
+      tags: [Admin]
+      summary: Verify a user's submitted Pocket Option account — ADMIN/MODERATOR
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pocketOptionAccountId]
+              properties: { pocketOptionAccountId: { type: string } }
+      responses:
+        "200": { description: Verified }
+        "400": { description: "Account does not belong to that user" }
+        "404": { description: Pocket Option account not found }
+
+  /admin/logs:
+    get:
+      tags: [Admin]
+      summary: System logs or admin-action audit trail — ADMIN/MODERATOR
+      parameters:
+        - { name: view, in: query, schema: { type: string, enum: [logs, admin-actions], default: logs } }
+        - { name: level, in: query, schema: { type: string, enum: [INFO, WARN, ERROR, SECURITY] } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, default: 30, maximum: 100 } }
+      responses:
+        "200": { description: OK }
+
+  /admin/analytics:
+    get:
+      tags: [Admin]
+      summary: Live platform counts (users by status, unverified Pocket Option IDs, total signals) — ADMIN/MODERATOR
+      responses:
+        "200": { description: OK }
+
+  /admin/settings:
+    get:
+      tags: [Admin]
+      summary: List platform settings — ADMIN/MODERATOR
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { settings: { type: array, items: { $ref: "#/components/schemas/Setting" } } }
+    patch:
+      tags: [Admin]
+      summary: Update a platform setting — ADMIN only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key, value]
+              properties: { key: { type: string }, value: {} }
+      responses:
+        "200": { description: Updated }
+        "403": { description: "Admin only (Moderators can read but not write)" }
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sf_access
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    cronSecret:
+      type: http
+      scheme: bearer
+      description: CRON_SECRET, used only by the Vercel Cron invocation of /market-data/ingest
+
+  responses:
+    Unauthorized:
+      description: Not authenticated
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    BadRequest:
+      description: Invalid input
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    RateLimited:
+      description: Too many requests
+      headers:
+        Retry-After: { schema: { type: integer }, description: Seconds until the block lifts }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+        details: { type: object, description: "Present on some validation errors" }
+
+    UserProfile:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: string }
+        name: { type: string, nullable: true }
+        role: { type: string, enum: [ADMIN, MODERATOR, USER] }
+        status: { type: string, enum: [PENDING, ACTIVE, REJECTED, BLOCKED] }
+        emailVerified: { type: boolean }
+        twoFactorEnabled: { type: boolean }
+        telegram:
+          type: object
+          nullable: true
+          properties: { username: { type: string, nullable: true }, linkedAt: { type: string, format: date-time } }
+        pocketOption:
+          type: object
+          nullable: true
+          properties: { accountId: { type: string }, verified: { type: boolean } }
+
+    AdminUserSummary:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: string }
+        name: { type: string, nullable: true }
+        status: { type: string, enum: [PENDING, ACTIVE, REJECTED, BLOCKED] }
+        role: { type: string, enum: [ADMIN, MODERATOR, USER] }
+        emailVerified: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        telegram: { type: object, nullable: true, properties: { username: { type: string, nullable: true } } }
+        pocketOption:
+          type: object
+          nullable: true
+          properties: { accountId: { type: string }, verified: { type: boolean } }
+
+    Signal:
+      type: object
+      properties:
+        id: { type: string }
+        pair: { type: string, example: EUR/USD }
+        direction: { type: string, enum: [BUY, SELL] }
+        entryPrice: { type: number }
+        confidenceScore: { type: number, minimum: 0, maximum: 100 }
+        expirationTime: { type: string, format: date-time }
+        technicalSummary: { type: string }
+        riskLevel: { type: string, enum: [LOW, MEDIUM, HIGH] }
+        timeframe: { type: string, enum: [M1, M5, M15, M30, H1, H4, D1] }
+        status: { type: string, enum: [PENDING, ACTIVE, EXPIRED, WON, LOST, CANCELLED] }
+        engineVersion: { type: string }
+        createdAt: { type: string, format: date-time }
+        history: { $ref: "#/components/schemas/SignalHistory" }
+        aiAnalysis: { $ref: "#/components/schemas/AIAnalysis" }
+
+    SignalHistory:
+      type: object
+      nullable: true
+      properties:
+        outcome: { type: string, enum: [PENDING, WIN, LOSS, BREAK_EVEN] }
+        closePrice: { type: number, nullable: true }
+        pnlPips: { type: number, nullable: true }
+        closedAt: { type: string, format: date-time, nullable: true }
+
+    AIAnalysis:
+      type: object
+      nullable: true
+      properties:
+        summary: { type: string }
+        reasoning: { type: string }
+        riskHighlights: { type: string }
+        confidenceEstimate: { type: number, description: "The AI's own qualitative read — not the authoritative score (see Signal.confidenceScore)" }
+        model: { type: string }
+
+    SignalGenerationResult:
+      type: object
+      properties:
+        pair: { type: string }
+        timeframe: { type: string }
+        generated: { type: boolean }
+        reason: { type: string, description: "Why nothing was generated, when generated is false" }
+        signalId: { type: string }
+
+    Candle:
+      type: object
+      properties:
+        timestamp: { type: string, format: date-time }
+        open: { type: number }
+        high: { type: number }
+        low: { type: number }
+        close: { type: number }
+        volume: { type: number }
+
+    Indicator:
+      type: object
+      properties:
+        type: { type: string, enum: [RSI, EMA, SMA, MACD, ATR, ADX, CCI, VWAP, BOLLINGER_BANDS, STOCHASTIC, PIVOT_POINTS] }
+        value: { description: "Single number for simple indicators, an object for multi-value ones (e.g. MACD)" }
+        timestamp: { type: string, format: date-time }
+
+    Notification:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        body: { type: string }
+        channel: { type: string, enum: [EMAIL, TELEGRAM, PUSH, BROWSER] }
+        status: { type: string, enum: [PENDING, SENT, FAILED, READ] }
+        readAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    Setting:
+      type: object
+      properties:
+        id: { type: string }
+        key: { type: string }
+        value: {}
+        updatedAt: { type: string, format: date-time }
+
+    WinRateSummary:
+      type: object
+      properties:
+        winRate: { type: number, nullable: true, description: "WIN / (WIN + LOSS) as a percentage; null if nothing decisive yet" }
+        totalResolved: { type: integer }
+        wins: { type: integer }
+        losses: { type: integer }
+        breakEven: { type: integer }
+        avgPnlPips: { type: number, nullable: true }

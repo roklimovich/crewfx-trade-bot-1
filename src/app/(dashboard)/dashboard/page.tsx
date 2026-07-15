@@ -1,11 +1,23 @@
-import { Radar, Trophy, Activity, Gauge } from 'lucide-react';
-import { StatCard } from '@/components/dashboard/stat-card';
-import { SignalFeed } from '@/components/dashboard/signal-feed';
+import { Suspense } from 'react';
+import { StatsRow, StatsRowSkeleton } from '@/components/dashboard/stats-row';
+import {
+  RecentSignalsSection,
+  RecentSignalsSkeleton,
+} from '@/components/dashboard/recent-signals-section';
 import { PerformanceChart } from '@/components/dashboard/performance-chart';
-import { mockSignals, mockStats, mockPerformanceSeries } from '@/lib/mock-data';
+import { LiveChartSection } from '@/components/dashboard/live-chart-section';
+import { PairBreakdownTable } from '@/components/dashboard/pair-breakdown-table';
 
 export const metadata = { title: 'Dashboard' };
 
+/**
+ * The page shell itself does no data fetching — StatsRow and RecentSignalsSection are each their
+ * own async Server Component, wrapped in independent <Suspense> boundaries (Phase 12). This means
+ * the shell (title, live chart, performance chart, pair table — the latter three already fetch
+ * their own data client-side) can stream to the browser immediately, while each server-rendered
+ * section fills in as soon as its own Prisma queries resolve, rather than the whole page waiting
+ * on the slowest query before showing anything at all.
+ */
 export default function DashboardOverviewPage() {
   return (
     <div className="space-y-8">
@@ -16,28 +28,15 @@ export default function DashboardOverviewPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Active signals" value={String(mockStats.activeSignals)} icon={Radar} />
-        <StatCard
-          label="Win rate (30d)"
-          value={`${mockStats.winRate30d}%`}
-          icon={Trophy}
-          tone="success"
-        />
-        <StatCard
-          label="Signals today"
-          value={String(mockStats.totalSignalsToday)}
-          icon={Activity}
-        />
-        <StatCard
-          label="Avg. confidence"
-          value={`${mockStats.avgConfidence}%`}
-          icon={Gauge}
-          tone="accent"
-        />
-      </div>
+      <Suspense fallback={<StatsRowSkeleton />}>
+        <StatsRow />
+      </Suspense>
 
-      <PerformanceChart data={mockPerformanceSeries} />
+      <LiveChartSection />
+
+      <PerformanceChart />
+
+      <PairBreakdownTable />
 
       <div>
         <div className="mb-4 flex items-center justify-between">
@@ -46,7 +45,9 @@ export default function DashboardOverviewPage() {
             View all
           </a>
         </div>
-        <SignalFeed signals={mockSignals} limit={4} />
+        <Suspense fallback={<RecentSignalsSkeleton />}>
+          <RecentSignalsSection />
+        </Suspense>
       </div>
     </div>
   );

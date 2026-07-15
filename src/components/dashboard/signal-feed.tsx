@@ -1,23 +1,33 @@
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/format-time';
-import type { MockSignal } from '@/lib/mock-data';
+import type { SignalFeedItem, SignalFeedStatus } from '@/types/signal';
 
-const STATUS_STYLES: Record<MockSignal['status'], string> = {
+const STATUS_STYLES: Record<SignalFeedStatus, string> = {
+  PENDING: 'bg-muted text-muted-foreground',
   ACTIVE: 'bg-primary/15 text-primary',
   WON: 'bg-success/15 text-success',
   LOST: 'bg-danger/15 text-danger',
   EXPIRED: 'bg-muted text-muted-foreground',
+  CANCELLED: 'bg-muted text-muted-foreground',
 };
 
-const RISK_STYLES: Record<MockSignal['riskLevel'], string> = {
+const RISK_STYLES: Record<SignalFeedItem['riskLevel'], string> = {
   LOW: 'text-success',
   MEDIUM: 'text-accent',
   HIGH: 'text-danger',
 };
 
-export function SignalFeed({ signals, limit }: { signals: MockSignal[]; limit?: number }) {
+export function SignalFeed({ signals, limit }: { signals: SignalFeedItem[]; limit?: number }) {
   const rows = limit ? signals.slice(0, limit) : signals;
+
+  if (rows.length === 0) {
+    return (
+      <div className="glass-panel p-10 text-center text-sm text-muted-foreground">
+        No signals yet. Once the engine runs, they&rsquo;ll show up here.
+      </div>
+    );
+  }
 
   return (
     <div className="glass-panel divide-y divide-white/5 overflow-hidden p-0">

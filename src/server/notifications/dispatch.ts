@@ -1,0 +1,236 @@
+import { prisma } from '@/server/db/prisma';
+import { logEvent } from '@/server/security/audit-log';
+import {
+  buildNotificationContent,
+  buildTelegramMessage,
+  buildSignalEmail,
+  buildPushPayload,
+  type SignalNotificationInput,
+} from './templates';
+import { sendTelegramMessage, isTelegramConfigured } from './channels/telegram';
+import { sendSignalEmail, isEmailConfigured } from './channels/email';
+import { sendWebPush, isPushConfigured, PushSubscriptionExpiredError } from './channels/push';
+import { publishRealtimeEvent } from './realtime';
+
+export interface ChannelTally {
+  EMAIL: { sent: number; failed: number };
+  TELEGRAM: { sent: number; failed: number };
+  BROWSER: { sent: number; failed: number };
+  PUSH: { sent: number; failed: number };
+}
+
+export interface DispatchResult {
+  usersNotified: number;
+  channelResults: ChannelTally | Record<string, never>;
+}
+
+/**
+ * Notifies every ACTIVE user of a new signal, across whichever channels are configured and
+ * available for that specific user (Telegram only if linked, push only if subscribed, email
+ * always since every account has one).
+ *
+ * v1 simplification, documented rather than hidden: there is no per-user "which pairs am I
+ * interested in" preference in the schema yet — every ACTIVE user gets notified of every signal.
+ * At real scale this would want a watchlist/preference table; not built here to avoid scope
+ * creep beyond what Phase 10 asked for, but it's a natural next addition.
+ */
+export async function dispatchSignalNotifications(signalId: string): Promise<DispatchResult> {
+  const signal = await prisma.signal.findUnique({
+    where: { id: signalId },
+    include: { aiAnalysis: true },
+  });
+  if (!signal) {
+    return { usersNotified: 0, channelResults: {} };
+  }
+
+  const signalInput: SignalNotificationInput = {
+    pair: signal.pair,
+    direction: signal.direction,
+    entryPrice: signal.entryPrice,
+    confidenceScore: signal.confidenceScore,
+    riskLevel: signal.riskLevel,
+    timeframe: signal.timeframe,
+    technicalSummary: signal.technicalSummary,
+    aiSummary: signal.aiAnalysis?.summary,
+  };
+
+  const users = await prisma.user.findMany({
+    where: { status: 'ACTIVE' },
+    include: { telegramAccount: true, pushSubscriptions: true },
+  });
+
+  const channelResults: ChannelTally = {
+    EMAIL: { sent: 0, failed: 0 },
+    TELEGRAM: { sent: 0, failed: 0 },
+    BROWSER: { sent: 0, failed: 0 },
+    PUSH: { sent: 0, failed: 0 },
+  };
+
+  for (const user of users) {
+    await Promise.allSettled([
+      dispatchEmail(user.id, user.email, signalInput, signal.id, channelResults),
+      user.telegramAccount
+        ? dispatchTelegram(
+            user.id,
+            user.telegramAccount.chatId,
+            signalInput,
+            signal.id,
+            channelResults,
+          )
+        : Promise.resolve(),
+      dispatchBrowser(user.id, signalInput, signal.id, channelResults),
+      user.pushSubscriptions.length > 0
+        ? dispatchPush(user.id, user.pushSubscriptions, signalInput, signal.id, channelResults)
+        : Promise.resolve(),
+    ]);
+  }
+
+  await logEvent('INFO', `Notifications dispatched for signal ${signalId}`, {
+    context: { signalId, usersNotified: users.length, channelResults },
+  });
+
+  return { usersNotified: users.length, channelResults };
+}
+
+async function dispatchEmail(
+  userId: string,
+  email: string,
+  signal: SignalNotificationInput,
+  signalId: string,
+  tally: ChannelTally,
+): Promise<void> {
+  const { title, body } = buildNotificationContent(signal);
+  const notification = await prisma.notification.create({
+    data: { userId, signalId, channel: 'EMAIL', title, body, status: 'PENDING' },
+  });
+
+  if (!isEmailConfigured()) {
+    await prisma.notification.update({
+      where: { id: notification.id },
+      data: { status: 'FAILED' },
+    });
+    tally.EMAIL.failed++;
+    return;
+  }
+
+  try {
+    const { subject, html } = buildSignalEmail(signal);
+    await sendSignalEmail(email, subject, html);
+    await prisma.notification.update({
+      where: { id: notification.id },
+      data: { status: 'SENT', sentAt: new Date() },
+    });
+    tally.EMAIL.sent++;
+  } catch {
+    await prisma.notification.update({
+      where: { id: notification.id },
+      data: { status: 'FAILED' },
+    });
+    tally.EMAIL.failed++;
+  }
+}
+
+async function dispatchTelegram(
+  userId: string,
+  chatId: string,
+  signal: SignalNotificationInput,
+  signalId: string,
+  tally: ChannelTally,
+): Promise<void> {
+  const { title, body } = buildNotificationContent(signal);
+  const notification = await prisma.notification.create({
+    data: { userId, signalId, channel: 'TELEGRAM', title, body, status: 'PENDING' },
+  });
+
+  if (!isTelegramConfigured()) {
+    await prisma.notification.update({
+      where: { id: notification.id },
+      data: { status: 'FAILED' },
+    });
+    tally.TELEGRAM.failed++;
+    return;
+  }
+
+  try {
+    await sendTelegramMessage(chatId, buildTelegramMessage(signal));
+    await prisma.notification.update({
+      where: { id: notification.id },
+      data: { status: 'SENT', sentAt: new Date() },
+    });
+    tally.TELEGRAM.sent++;
+  } catch {
+    await prisma.notification.update({
+      where: { id: notification.id },
+      data: { status: 'FAILED' },
+    });
+    tally.TELEGRAM.failed++;
+  }
+}
+
+/** "Delivery" for BROWSER is publishing a realtime event — actual display happens client-side (see use-notification-stream.ts). */
+async function dispatchBrowser(
+  userId: string,
+  signal: SignalNotificationInput,
+  signalId: string,
+  tally: ChannelTally,
+): Promise<void> {
+  const { title, body } = buildNotificationContent(signal);
+  const notification = await prisma.notification.create({
+    data: { userId, signalId, channel: 'BROWSER', title, body, status: 'SENT', sentAt: new Date() },
+  });
+
+  await publishRealtimeEvent(userId, {
+    id: notification.id,
+    title,
+    body,
+    signalId,
+    createdAt: notification.createdAt.toISOString(),
+  });
+  tally.BROWSER.sent++;
+}
+
+async function dispatchPush(
+  userId: string,
+  subscriptions: { id: string; endpoint: string; p256dh: string; auth: string }[],
+  signal: SignalNotificationInput,
+  signalId: string,
+  tally: ChannelTally,
+): Promise<void> {
+  const { title, body } = buildNotificationContent(signal);
+  const notification = await prisma.notification.create({
+    data: { userId, signalId, channel: 'PUSH', title, body, status: 'PENDING' },
+  });
+
+  if (!isPushConfigured()) {
+    await prisma.notification.update({
+      where: { id: notification.id },
+      data: { status: 'FAILED' },
+    });
+    tally.PUSH.failed++;
+    return;
+  }
+
+  const payload = buildPushPayload(signal);
+  let anySucceeded = false;
+
+  for (const sub of subscriptions) {
+    try {
+      await sendWebPush(
+        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+        payload,
+      );
+      anySucceeded = true;
+    } catch (err) {
+      if (err instanceof PushSubscriptionExpiredError) {
+        await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {});
+      }
+    }
+  }
+
+  await prisma.notification.update({
+    where: { id: notification.id },
+    data: anySucceeded ? { status: 'SENT', sentAt: new Date() } : { status: 'FAILED' },
+  });
+  if (anySucceeded) tally.PUSH.sent++;
+  else tally.PUSH.failed++;
+}
