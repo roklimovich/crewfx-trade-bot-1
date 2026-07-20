@@ -1,7 +1,10 @@
 import { LayoutDashboard, Radar, Settings } from 'lucide-react';
+import type { Messages } from '@/i18n/locales/en';
 
-export const DASHBOARD_NAV_ITEMS = [
-  { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
-  { href: '/dashboard/signals', label: 'Signals', icon: Radar },
-  { href: '/dashboard/settings', label: 'Settings', icon: Settings },
-];
+export function getDashboardNavItems(t: Messages) {
+  return [
+    { href: '/dashboard', label: t.dashboard.nav.overview, icon: LayoutDashboard },
+    { href: '/dashboard/signals', label: t.dashboard.nav.signals, icon: Radar },
+    { href: '/dashboard/settings', label: t.dashboard.nav.settings, icon: Settings },
+  ];
+}

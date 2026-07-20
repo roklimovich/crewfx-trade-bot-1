@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Menu, X, CandlestickChart, ShieldCheck, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UserMenu } from '@/components/dashboard/user-menu';
+import { LanguageSwitcher } from '@/components/language-switcher';
 import { ADMIN_NAV_ITEMS } from './nav-items';
 import type { DashboardUser } from '@/types/user';
 
@@ -102,7 +103,10 @@ export function AdminShell({ user, children }: { user: DashboardUser; children: 
             <Menu className="h-5 w-5" />
           </button>
           <div className="hidden lg:block" />
-          <UserMenu user={user} />
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher className="hidden sm:flex" />
+            <UserMenu user={user} />
+          </div>
         </header>
 
         <main className="flex-1 px-4 py-8 sm:px-6 lg:px-8">{children}</main>

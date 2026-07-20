@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { Space_Grotesk, Inter, JetBrains_Mono } from 'next/font/google';
+import { LocaleProvider } from '@/i18n/locale-provider';
+import { getServerLocale } from '@/i18n/get-messages';
 import '@/styles/globals.css';
 
 const display = Space_Grotesk({
@@ -55,10 +57,12 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = getServerLocale();
+
   return (
-    <html lang="en" className={`dark ${display.variable} ${body.variable} ${mono.variable}`}>
+    <html lang={locale} className={`dark ${display.variable} ${body.variable} ${mono.variable}`}>
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
-        {children}
+        <LocaleProvider initialLocale={locale}>{children}</LocaleProvider>
       </body>
     </html>
   );

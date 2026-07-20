@@ -1,3 +1,20 @@
+import type { Locale } from '@/i18n/config';
+import { isLocale, DEFAULT_LOCALE } from '@/i18n/config';
+
+/**
+ * Resolves which locale's AI summary to use for a given recipient: their own locale if a
+ * generated analysis exists for it, else the platform default (English), else undefined (no AI
+ * analysis exists in any locale yet — callers fall back further to the raw technicalSummary,
+ * which isn't LLM-generated so it needs no locale resolution at all).
+ */
+export function resolveAiSummary(
+  summariesByLocale: ReadonlyMap<string, string>,
+  recipientLocale: string,
+): string | undefined {
+  const locale: Locale = isLocale(recipientLocale) ? recipientLocale : DEFAULT_LOCALE;
+  return summariesByLocale.get(locale) ?? summariesByLocale.get(DEFAULT_LOCALE);
+}
+
 export interface SignalNotificationInput {
   pair: string;
   direction: 'BUY' | 'SELL';

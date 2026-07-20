@@ -22,8 +22,8 @@ export function WinRateAreaChart({ data }: { data: WinRateChartPoint[] }) {
       <AreaChart data={data} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
         <defs>
           <linearGradient id="winRateFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="hsl(248 100% 71%)" stopOpacity={0.35} />
-            <stop offset="100%" stopColor="hsl(248 100% 71%)" stopOpacity={0} />
+            <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
+            <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
@@ -44,7 +44,7 @@ export function WinRateAreaChart({ data }: { data: WinRateChartPoint[] }) {
         />
         <Tooltip
           contentStyle={{
-            background: 'hsl(260 35% 9%)',
+            background: 'hsl(var(--card))',
             border: '1px solid rgba(255,255,255,0.1)',
             borderRadius: 8,
             fontSize: 12,
@@ -54,7 +54,7 @@ export function WinRateAreaChart({ data }: { data: WinRateChartPoint[] }) {
         <Area
           type="monotone"
           dataKey="winRate"
-          stroke="hsl(248 100% 71%)"
+          stroke="hsl(var(--primary))"
           strokeWidth={2}
           fill="url(#winRateFill)"
         />

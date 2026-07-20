@@ -8,6 +8,7 @@ import { setAuthCookies } from '@/lib/cookies';
 import { generateCsrfToken } from '@/server/security/csrf';
 import { logEvent } from '@/server/security/audit-log';
 import { checkRateLimit, authRateLimiter } from '@/server/security/rate-limit';
+import { LOCALE_COOKIE } from '@/i18n/config';
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for') ?? 'unknown';
@@ -77,7 +78,16 @@ export async function POST(req: NextRequest) {
 
   await logEvent('INFO', 'User logged in', { userId: user.id, context: { ip } });
 
-  const res = NextResponse.json({ user: { id: user.id, email: user.email, role: user.role.name } });
+  const res = NextResponse.json({
+    user: { id: user.id, email: user.email, role: user.role.name },
+  });
   setAuthCookies(res, tokens, generateCsrfToken());
+  // Sync this device's language to whatever the user last picked on any device — a fresh login
+  // shouldn't leave them looking at a stale/different-device language choice.
+  res.cookies.set(LOCALE_COOKIE, user.locale, {
+    path: '/',
+    maxAge: 60 * 60 * 24 * 365,
+    sameSite: 'lax',
+  });
   return res;
 }

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { apiFetch, ApiError } from '@/lib/api-client';
+import { useTranslations } from '@/i18n/locale-provider';
 
 export default function LoginPage() {
   return (
@@ -18,6 +19,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const explicitRedirect = searchParams.get('redirect'); // only set when middleware bounced them from a protected page
+  const { messages: t } = useTranslations();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -60,13 +62,13 @@ function LoginForm() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-medium">Welcome back</h1>
-      <p className="mt-2 text-sm text-muted-foreground">Log in to see today&rsquo;s signals.</p>
+      <h1 className="font-display text-2xl font-medium">{t.auth.login.title}</h1>
+      <p className="mt-2 text-sm text-muted-foreground">{t.auth.login.subtitle}</p>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-4">
         <div>
           <label htmlFor="email" className="mb-1.5 block text-sm text-muted-foreground">
-            Email
+            {t.auth.login.email}
           </label>
           <input
             id="email"
@@ -83,10 +85,10 @@ function LoginForm() {
         <div>
           <div className="mb-1.5 flex items-center justify-between">
             <label htmlFor="password" className="text-sm text-muted-foreground">
-              Password
+              {t.auth.login.password}
             </label>
             <Link href="/forgot-password" className="text-xs text-primary hover:underline">
-              Forgot password?
+              {t.auth.login.forgotPassword}
             </Link>
           </div>
           <input
@@ -104,7 +106,7 @@ function LoginForm() {
         {needsTwoFactor && (
           <div>
             <label htmlFor="twoFactorToken" className="mb-1.5 block text-sm text-muted-foreground">
-              Authenticator code
+              {t.auth.login.code}
             </label>
             <input
               id="twoFactorToken"
@@ -128,14 +130,14 @@ function LoginForm() {
           className="flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
         >
           {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-          {needsTwoFactor ? 'Verify & log in' : 'Log in'}
+          {needsTwoFactor ? t.auth.login.verifyAndLogIn : t.auth.login.submit}
         </button>
       </form>
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
-        Don&rsquo;t have an account?{' '}
+        {t.auth.login.noAccount}{' '}
         <Link href="/register" className="text-primary hover:underline">
-          Create one
+          {t.auth.login.createOne}
         </Link>
       </p>
     </div>

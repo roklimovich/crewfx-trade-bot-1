@@ -4,8 +4,10 @@ import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import { apiFetch, ApiError } from '@/lib/api-client';
+import { useTranslations } from '@/i18n/locale-provider';
 
 export default function RegisterPage() {
+  const { messages: t } = useTranslations();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,13 +33,14 @@ export default function RegisterPage() {
     return (
       <div className="text-center">
         <CheckCircle2 className="mx-auto h-10 w-10 text-success" />
-        <h1 className="mt-4 font-display text-2xl font-medium">Check your email</h1>
+        <h1 className="mt-4 font-display text-2xl font-medium">{t.auth.register.checkEmail}</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          We sent a verification link to <span className="text-foreground">{email}</span>. Confirm
-          it, then an admin approves your account before signals unlock.
+          {t.auth.register.checkEmailDescriptionPrefix}{' '}
+          <span className="text-foreground">{email}</span>.{' '}
+          {t.auth.register.checkEmailDescriptionSuffix}
         </p>
         <Link href="/login" className="mt-6 inline-block text-sm text-primary hover:underline">
-          Back to login
+          {t.auth.register.backToLogin}
         </Link>
       </div>
     );
@@ -45,13 +48,13 @@ export default function RegisterPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-medium">Create your account</h1>
-      <p className="mt-2 text-sm text-muted-foreground">Free to start — no card required.</p>
+      <h1 className="font-display text-2xl font-medium">{t.auth.register.title}</h1>
+      <p className="mt-2 text-sm text-muted-foreground">{t.auth.register.subtitle}</p>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-4">
         <div>
           <label htmlFor="name" className="mb-1.5 block text-sm text-muted-foreground">
-            Name
+            {t.auth.register.name}
           </label>
           <input
             id="name"
@@ -67,7 +70,7 @@ export default function RegisterPage() {
 
         <div>
           <label htmlFor="email" className="mb-1.5 block text-sm text-muted-foreground">
-            Email
+            {t.auth.register.email}
           </label>
           <input
             id="email"
@@ -82,7 +85,7 @@ export default function RegisterPage() {
 
         <div>
           <label htmlFor="password" className="mb-1.5 block text-sm text-muted-foreground">
-            Password
+            {t.auth.register.password}
           </label>
           <input
             id="password"
@@ -94,9 +97,7 @@ export default function RegisterPage() {
             onChange={(e) => setPassword(e.target.value)}
             className="w-full rounded-lg border border-white/10 bg-white/5 px-3.5 py-2.5 text-sm outline-none ring-primary/50 transition-shadow focus:ring-2"
           />
-          <p className="mt-1.5 text-xs text-muted-foreground">
-            10+ characters, with upper, lower, and a digit.
-          </p>
+          <p className="mt-1.5 text-xs text-muted-foreground">{t.auth.register.passwordHint}</p>
         </div>
 
         {error && <p className="text-sm text-danger">{error}</p>}
@@ -107,14 +108,14 @@ export default function RegisterPage() {
           className="flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
         >
           {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-          Create account
+          {t.auth.register.submit}
         </button>
       </form>
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
-        Already have an account?{' '}
+        {t.auth.register.haveAccount}{' '}
         <Link href="/login" className="text-primary hover:underline">
-          Log in
+          {t.auth.login.submit}
         </Link>
       </p>
     </div>

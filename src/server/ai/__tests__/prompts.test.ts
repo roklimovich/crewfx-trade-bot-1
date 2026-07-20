@@ -40,4 +40,25 @@ describe('buildAnalysisPrompt', () => {
     expect(system.toLowerCase()).toContain('position-sizing');
     expect(system.toLowerCase()).toContain('guarantee');
   });
+
+  it('defaults to instructing the model to respond in English', () => {
+    const { system } = buildAnalysisPrompt(context);
+    expect(system).toContain('Write your response entirely in English');
+  });
+
+  it('instructs the model to respond in Russian when locale is "ru"', () => {
+    const { system, user } = buildAnalysisPrompt(context, 'ru');
+    expect(system).toContain('Write your response entirely in Russian');
+    expect(user).toContain('respond in Russian');
+    // JSON keys must still be in English even when the values are Russian
+    expect(system).toContain('"summary"');
+    expect(system).toContain('"reasoning"');
+  });
+
+  it('never asks for two different languages at once', () => {
+    const { system: enSystem } = buildAnalysisPrompt(context, 'en');
+    const { system: ruSystem } = buildAnalysisPrompt(context, 'ru');
+    expect(enSystem).not.toContain('Russian');
+    expect(ruSystem).not.toContain('Write your response entirely in English');
+  });
 });

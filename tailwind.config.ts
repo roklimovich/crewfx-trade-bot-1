@@ -37,7 +37,7 @@ const config: Config = {
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'glow-purple': 'radial-gradient(circle at 50% 0%, rgba(139,92,246,0.25), transparent 60%)',
+        'glow-blue': 'radial-gradient(circle at 50% 0%, rgba(59,130,246,0.28), transparent 60%)',
       },
       backdropBlur: { xs: '2px' },
       borderRadius: {

@@ -1,5 +1,6 @@
 import { prisma } from '@/server/db/prisma';
 import { revokeAllSessionsForUser } from '@/server/auth/session';
+import { kickUser as forceKickUser } from '@/server/auth/kick';
 import { logAdminAction, logEvent } from '@/server/security/audit-log';
 
 export class AdminActionError extends Error {
@@ -44,6 +45,7 @@ export async function rejectUser(adminId: string, targetUserId: string, notes?: 
     data: { status: 'REJECTED' },
   });
   await revokeAllSessionsForUser(targetUserId);
+  await forceKickUser(targetUserId); // immediate effect — see kick.ts for why revoking the session alone isn't enough
   await logAdminAction({ adminId, actionType: 'REJECT_USER', targetUserId, notes });
   await logEvent('SECURITY', 'User rejected', {
     userId: targetUserId,
@@ -63,7 +65,8 @@ export async function blockUser(adminId: string, targetUserId: string, notes?: s
     where: { id: targetUserId },
     data: { status: 'BLOCKED' },
   });
-  await revokeAllSessionsForUser(targetUserId); // kick them out immediately, everywhere
+  await revokeAllSessionsForUser(targetUserId); // stops future token refreshes
+  await forceKickUser(targetUserId); // stops the CURRENT still-valid access token immediately too — see kick.ts
   await logAdminAction({ adminId, actionType: 'BLOCK_USER', targetUserId, notes });
   await logEvent('SECURITY', 'User blocked', {
     userId: targetUserId,
@@ -87,6 +90,28 @@ export async function unblockUser(adminId: string, targetUserId: string) {
     context: { unblockedBy: adminId },
   });
   return user;
+}
+
+/**
+ * Force-logout, without banning the account — the account stays exactly as active/pending/etc.
+ * as it was, but every current session (including any still-valid access token, thanks to the
+ * kick flag — see kick.ts) is terminated immediately. Distinct from blockUser(): use this for
+ * "make them re-authenticate right now" (suspicious activity, forcing a 2FA re-enrollment,
+ * post-password-change hygiene) without the account-level consequences of a block.
+ */
+export async function kickUser(adminId: string, targetUserId: string, notes?: string) {
+  if (adminId === targetUserId)
+    throw new AdminActionError('You cannot kick your own account.', 400);
+  await getTargetOrThrow(targetUserId);
+
+  await revokeAllSessionsForUser(targetUserId);
+  await forceKickUser(targetUserId);
+
+  await logAdminAction({ adminId, actionType: 'KICK_USER', targetUserId, notes });
+  await logEvent('SECURITY', 'User kicked (forced logout)', {
+    userId: targetUserId,
+    context: { kickedBy: adminId },
+  });
 }
 
 export async function verifyPocketOptionAccount(

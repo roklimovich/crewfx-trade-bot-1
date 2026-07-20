@@ -49,7 +49,11 @@ export function UserMenu({ user }: { user: DashboardUser }) {
       </button>
 
       {open && (
-        <div className="glass-panel absolute right-0 top-11 w-56 overflow-hidden p-0">
+        <div
+          className="overlay-panel absolute right-0 top-12 z-[60] w-56 overflow-hidden p-0"
+          role="dialog"
+          aria-label="Account menu"
+        >
           <div className="border-b border-white/10 px-4 py-3">
             <p className="truncate text-sm font-medium">{user.name ?? 'Trader'}</p>
             <p className="truncate text-xs text-muted-foreground">{user.email}</p>

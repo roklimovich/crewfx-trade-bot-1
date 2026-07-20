@@ -4,11 +4,14 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { CandlestickChart, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { DASHBOARD_NAV_ITEMS } from './nav-items';
+import { getDashboardNavItems } from './nav-items';
+import { useTranslations } from '@/i18n/locale-provider';
 import type { DashboardUser } from '@/types/user';
 
 export function Sidebar({ user }: { user: DashboardUser }) {
   const pathname = usePathname();
+  const { messages: t } = useTranslations();
+  const navItems = getDashboardNavItems(t);
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-white/5 bg-white/[0.02] lg:flex">
@@ -18,7 +21,7 @@ export function Sidebar({ user }: { user: DashboardUser }) {
       </div>
 
       <nav className="flex-1 space-y-1 p-4">
-        {DASHBOARD_NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const active = pathname === item.href;
           return (
             <Link
@@ -43,13 +46,13 @@ export function Sidebar({ user }: { user: DashboardUser }) {
             className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
           >
             <ShieldCheck className="h-4 w-4" strokeWidth={1.75} />
-            Admin panel
+            {t.dashboard.nav.adminPanel}
           </Link>
         )}
       </nav>
 
       <div className="border-t border-white/5 p-4 text-xs text-muted-foreground">
-        Signals are informational only. You make every trading decision.
+        {t.dashboard.footerNote}
       </div>
     </aside>
   );

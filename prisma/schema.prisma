@@ -109,6 +109,7 @@ enum AdminActionType {
   DELETE_SIGNAL
   IMPERSONATE
   VERIFY_POCKET_OPTION
+  KICK_USER
 }
 
 enum VerificationTokenType {
@@ -143,6 +144,9 @@ model User {
   role             Role       @relation(fields: [roleId], references: [id])
   twoFactorEnabled Boolean    @default(false)
   twoFactorSecret  String?
+  locale           String     @default("en") // "en" | "ru" — see src/i18n. Persisted so async
+  // notification content (Phase 10) can be localized even when there's no live browser cookie
+  // to read from (a background cron job has no request context).
 
   referredById String?
   referredBy   User?  @relation("Referrals", fields: [referredById], references: [id], onDelete: SetNull)
@@ -274,7 +278,7 @@ model Signal {
   engineVersion     String // which rule-set/version generated this, for audit/backtesting
 
   indicatorsUsed Indicator[]     @relation("SignalIndicators")
-  aiAnalysis     AIAnalysis?
+  aiAnalyses     AIAnalysis[]
   history        SignalHistory?
   notifications  Notification[]
 
@@ -305,17 +309,22 @@ model SignalHistory {
 
 /// LLM-generated, human-readable explanation of a rule-based signal.
 /// Never the source of the signal itself — see Phase 9.
+/// One row PER LOCALE per signal (Phase 13 addition) — `locale` + the compound unique below is
+/// what makes "AI descriptions translated to whichever language is selected" possible, since a
+/// single generated-once English explanation can't serve a Russian-reading user honestly.
 model AIAnalysis {
   id                 String   @id @default(cuid())
-  signalId           String   @unique
+  signalId           String
   signal             Signal   @relation(fields: [signalId], references: [id], onDelete: Cascade)
+  locale             String   @default("en") // "en" | "ru" — see src/i18n
   summary            String   @db.Text
   reasoning          String   @db.Text
   riskHighlights     String   @db.Text
   confidenceEstimate Float
-  model              String // e.g. "claude-sonnet-4-6"
+  model              String // e.g. "claude-sonnet-5"
   createdAt          DateTime @default(now())
 
+  @@unique([signalId, locale])
   @@map("ai_analyses")
 }
 
@@ -338,6 +347,8 @@ model Notification {
   createdAt DateTime            @default(now())
 
   @@index([userId, status])
+  @@index([userId, createdAt])
+  @@index([userId, readAt, createdAt])
   @@index([signalId])
   @@map("notifications")
 }

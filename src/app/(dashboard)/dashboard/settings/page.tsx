@@ -8,6 +8,7 @@ import { PocketOptionSection } from '@/components/dashboard/settings/pocket-opti
 import { TelegramSection } from '@/components/dashboard/settings/telegram-section';
 import { PushNotificationsSection } from '@/components/dashboard/settings/push-notifications-section';
 import { TwoFactorSection } from '@/components/dashboard/settings/two-factor-section';
+import { useTranslations } from '@/i18n/locale-provider';
 
 interface MeResponse {
   id: string;
@@ -20,6 +21,7 @@ interface MeResponse {
 }
 
 export default function SettingsPage() {
+  const { messages: t } = useTranslations();
   const [profile, setProfile] = useState<MeResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -44,10 +46,8 @@ export default function SettingsPage() {
   return (
     <div className="max-w-2xl space-y-6">
       <div>
-        <h1 className="font-display text-2xl font-medium">Settings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Manage your profile, integrations, and security.
-        </p>
+        <h1 className="font-display text-2xl font-medium">{t.dashboard.settings.title}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t.dashboard.settings.subtitle}</p>
       </div>
 
       <ProfileSection

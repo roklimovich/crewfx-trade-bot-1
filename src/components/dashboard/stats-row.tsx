@@ -1,7 +1,7 @@
 import { Radar, Trophy, Activity, Gauge } from 'lucide-react';
 import { StatCard } from '@/components/dashboard/stat-card';
 import { prisma } from '@/server/db/prisma';
-import { computeWinRateSummary, type ResolvedRecord } from '@/server/analytics/compute-stats';
+import { getMessages } from '@/i18n/get-messages';
 
 /**
  * Its own async Server Component (rather than inline in the page) specifically so it can be
@@ -10,36 +10,48 @@ import { computeWinRateSummary, type ResolvedRecord } from '@/server/analytics/c
  * so a slow one doesn't block the other from appearing.
  */
 export async function StatsRow() {
+  const t = getMessages();
   const startOfDay = new Date();
   startOfDay.setUTCHours(0, 0, 0, 0);
 
-  const [activeSignals, signalsToday, histories, avgConfidenceResult] = await Promise.all([
+  const [activeSignals, signalsToday, outcomeCounts, avgConfidenceResult] = await Promise.all([
     prisma.signal.count({ where: { status: 'ACTIVE' } }),
     prisma.signal.count({ where: { createdAt: { gte: startOfDay } } }),
-    prisma.signalHistory.findMany({ include: { signal: { select: { confidenceScore: true } } } }),
+    prisma.signalHistory.groupBy({
+      by: ['outcome'],
+      where: { outcome: { in: ['WIN', 'LOSS'] } },
+      _count: { _all: true },
+    }),
     prisma.signal.aggregate({ _avg: { confidenceScore: true } }),
   ]);
 
-  const records: ResolvedRecord[] = histories.map((h) => ({
-    outcome: h.outcome,
-    closedAt: h.closedAt,
-    pnlPips: h.pnlPips,
-    confidenceScore: h.signal.confidenceScore,
-  }));
-  const winRateSummary = computeWinRateSummary(records);
+  const wins = outcomeCounts.find((result) => result.outcome === 'WIN')?._count._all ?? 0;
+  const losses = outcomeCounts.find((result) => result.outcome === 'LOSS')?._count._all ?? 0;
+  const decisiveSignals = wins + losses;
+  const winRateSummary = {
+    winRate: decisiveSignals > 0 ? (wins / decisiveSignals) * 100 : null,
+  };
 
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-      <StatCard label="Active signals" value={String(activeSignals)} icon={Radar} />
       <StatCard
-        label="Win rate (all time)"
+        label={t.dashboard.overview.activeSignals}
+        value={String(activeSignals)}
+        icon={Radar}
+      />
+      <StatCard
+        label={t.dashboard.overview.winRate}
         value={winRateSummary.winRate !== null ? `${winRateSummary.winRate.toFixed(1)}%` : '—'}
         icon={Trophy}
         tone="success"
       />
-      <StatCard label="Signals today" value={String(signalsToday)} icon={Activity} />
       <StatCard
-        label="Avg. confidence"
+        label={t.dashboard.overview.signalsToday}
+        value={String(signalsToday)}
+        icon={Activity}
+      />
+      <StatCard
+        label={t.dashboard.overview.avgConfidence}
         value={
           avgConfidenceResult._avg.confidenceScore !== null
             ? `${Math.round(avgConfidenceResult._avg.confidenceScore)}%`

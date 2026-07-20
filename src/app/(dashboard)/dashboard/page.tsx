@@ -7,6 +7,7 @@ import {
 import { PerformanceChart } from '@/components/dashboard/performance-chart';
 import { LiveChartSection } from '@/components/dashboard/live-chart-section';
 import { PairBreakdownTable } from '@/components/dashboard/pair-breakdown-table';
+import { getMessages } from '@/i18n/get-messages';
 
 export const metadata = { title: 'Dashboard' };
 
@@ -19,13 +20,13 @@ export const metadata = { title: 'Dashboard' };
  * on the slowest query before showing anything at all.
  */
 export default function DashboardOverviewPage() {
+  const t = getMessages();
+
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-display text-2xl font-medium">Overview</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Here&rsquo;s what the engine is seeing right now.
-        </p>
+        <h1 className="font-display text-2xl font-medium">{t.dashboard.overview.title}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t.dashboard.overview.subtitle}</p>
       </div>
 
       <Suspense fallback={<StatsRowSkeleton />}>
@@ -40,9 +41,9 @@ export default function DashboardOverviewPage() {
 
       <div>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-display text-lg font-medium">Recent signals</h2>
+          <h2 className="font-display text-lg font-medium">{t.dashboard.overview.recentSignals}</h2>
           <a href="/dashboard/signals" className="text-sm text-primary hover:underline">
-            View all
+            {t.dashboard.overview.viewAll}
           </a>
         </div>
         <Suspense fallback={<RecentSignalsSkeleton />}>

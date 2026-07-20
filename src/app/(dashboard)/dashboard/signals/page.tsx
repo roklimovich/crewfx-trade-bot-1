@@ -5,12 +5,14 @@ import { Search, Download, Loader2, ChevronLeft, ChevronRight } from 'lucide-rea
 import { SignalFeed } from '@/components/dashboard/signal-feed';
 import { apiFetch } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/i18n/locale-provider';
 import type { SignalFeedItem } from '@/types/signal';
 
 const STATUS_FILTERS = ['ALL', 'ACTIVE', 'WON', 'LOST', 'EXPIRED'] as const;
 const PAGE_SIZE = 20;
 
 export default function SignalsPage() {
+  const { messages: t } = useTranslations();
   const [status, setStatus] = useState<(typeof STATUS_FILTERS)[number]>('ALL');
   const [pair, setPair] = useState('');
   const [search, setSearch] = useState('');
@@ -63,7 +65,7 @@ export default function SignalsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-medium">Signals</h1>
+          <h1 className="font-display text-2xl font-medium">{t.dashboard.signals.title}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {total} signal{total === 1 ? '' : 's'} match your filters.
           </p>
@@ -73,7 +75,7 @@ export default function SignalsPage() {
           className="flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-sm font-medium hover:bg-white/5"
         >
           <Download className="h-4 w-4" />
-          Export CSV
+          {t.dashboard.signals.export}
         </button>
       </div>
 
@@ -98,7 +100,7 @@ export default function SignalsPage() {
         <input
           value={pair}
           onChange={(e) => setPair(e.target.value)}
-          placeholder="Pair (e.g. EUR/USD)"
+          placeholder={t.dashboard.signals.pairPlaceholder}
           className="w-40 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-xs outline-none ring-primary/50 focus:ring-2"
         />
 
@@ -107,7 +109,7 @@ export default function SignalsPage() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search technical summary…"
+            placeholder={t.dashboard.signals.searchPlaceholder}
             className="w-full rounded-full border border-white/10 bg-white/5 py-1.5 pl-8 pr-3 text-xs outline-none ring-primary/50 focus:ring-2"
           />
         </div>

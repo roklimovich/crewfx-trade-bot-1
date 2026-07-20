@@ -3,7 +3,7 @@ import { CandlestickChart } from 'lucide-react';
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-glow-purple px-6 py-16">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-glow-blue px-6 py-16">
       <div className="pointer-events-none absolute left-1/2 top-0 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-primary/10 blur-[120px]" />
 
       <div className="w-full max-w-md">

@@ -8,7 +8,9 @@ import { cn } from '@/lib/utils';
 import { Sidebar } from './sidebar';
 import { NotificationsDropdown } from './notifications-dropdown';
 import { UserMenu } from './user-menu';
-import { DASHBOARD_NAV_ITEMS } from './nav-items';
+import { getDashboardNavItems } from './nav-items';
+import { useTranslations } from '@/i18n/locale-provider';
+import { LanguageSwitcher } from '@/components/language-switcher';
 import type { DashboardUser } from '@/types/user';
 
 export function DashboardShell({
@@ -20,6 +22,8 @@ export function DashboardShell({
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
+  const { messages: t } = useTranslations();
+  const navItems = getDashboardNavItems(t);
 
   return (
     <div className="flex min-h-screen">
@@ -40,7 +44,7 @@ export function DashboardShell({
               </button>
             </div>
             <nav className="space-y-1">
-              {DASHBOARD_NAV_ITEMS.map((item) => {
+              {navItems.map((item) => {
                 const active = pathname === item.href;
                 return (
                   <Link
@@ -66,7 +70,7 @@ export function DashboardShell({
                   className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-muted-foreground hover:bg-white/5"
                 >
                   <ShieldCheck className="h-4 w-4" strokeWidth={1.75} />
-                  Admin panel
+                  {t.dashboard.nav.adminPanel}
                 </Link>
               )}
             </nav>
@@ -86,6 +90,7 @@ export function DashboardShell({
           <div className="hidden lg:block" />
 
           <div className="flex items-center gap-2">
+            <LanguageSwitcher className="hidden sm:flex" />
             <NotificationsDropdown />
             <UserMenu user={user} />
           </div>

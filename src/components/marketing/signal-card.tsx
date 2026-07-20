@@ -24,7 +24,7 @@ export function SignalCard({
   return (
     <div
       className={cn(
-        'glass-panel w-64 shrink-0 animate-float p-4 shadow-[0_20px_60px_-15px_rgba(139,107,255,0.35)]',
+        'glass-panel w-64 shrink-0 animate-float p-4 shadow-[0_20px_60px_-15px_rgba(59,130,246,0.4)]',
         className,
       )}
       style={style}

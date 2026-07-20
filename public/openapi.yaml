@@ -266,15 +266,17 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
     patch:
       tags: [Users]
-      summary: Update the current user's name
+      summary: Update the current user's name and/or site language
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [name]
-              properties: { name: { type: string, minLength: 2, maxLength: 80 } }
+              description: At least one of name/locale must be present.
+              properties:
+                name: { type: string, minLength: 2, maxLength: 80 }
+                locale: { type: string, enum: [en, ru], description: "Also syncs on next login to whichever device set it last" }
       responses:
         "200": { description: Updated }
         "401": { $ref: "#/components/responses/Unauthorized" }
@@ -348,14 +350,18 @@ paths:
   /signals/{id}/analyze:
     post:
       tags: [AI]
-      summary: Generate (or regenerate) AI analysis for a signal (ADMIN only)
+      summary: Generate (or regenerate) AI analysis for a signal, in every supported locale — ADMIN only
+      description: |
+        Generates one AIAnalysis row per supported locale (en, ru) that doesn't already exist for
+        this signal — one LLM call per missing locale. Pass ?force=true to delete every existing
+        locale's analysis first and regenerate all of them.
       parameters:
         - { name: id, in: path, required: true, schema: { type: string } }
-        - { name: force, in: query, schema: { type: boolean }, description: "If true, deletes any existing analysis and regenerates" }
+        - { name: force, in: query, schema: { type: boolean }, description: "If true, deletes any existing analysis (every locale) and regenerates" }
       responses:
-        "200": { description: Analysis stored }
+        "200": { description: "Analysis stored for at least one locale" }
         "403": { description: Admin only }
-        "422": { description: "Analysis was not performed (e.g. ANTHROPIC_API_KEY not configured, or model output failed validation)" }
+        "422": { description: "No locale could be analyzed (e.g. ANTHROPIC_API_KEY not configured, or model output failed validation for every locale)" }
 
   # ---------------------------------------------------------------- Market Data
   /market-data/candles:
@@ -603,6 +609,25 @@ paths:
         "200": { description: Unblocked }
         "400": { description: Not currently blocked }
 
+  /admin/users/{id}/kick:
+    post:
+      tags: [Admin]
+      summary: Force-logout a user everywhere, without changing their account status — ADMIN/MODERATOR
+      description: |
+        Distinct from block: ends every current session (including one already in progress,
+        thanks to a short-lived Redis revocation flag that's checked in addition to normal JWT
+        verification) without banning the account. Useful for forcing a re-login after a
+        suspicious-activity flag or a security policy change, without any account-level
+        consequence.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { notes: { type: string } } }
+      responses:
+        "200": { description: Kicked }
+        "400": { description: "Cannot kick your own account" }
+
   /admin/users/{id}/verify-pocket-option:
     post:
       tags: [Admin]
@@ -716,6 +741,7 @@ components:
         name: { type: string, nullable: true }
         role: { type: string, enum: [ADMIN, MODERATOR, USER] }
         status: { type: string, enum: [PENDING, ACTIVE, REJECTED, BLOCKED] }
+        locale: { type: string, enum: [en, ru], description: "Site language preference — also used to pick which language's AIAnalysis to send in notifications" }
         emailVerified: { type: boolean }
         twoFactorEnabled: { type: boolean }
         telegram:
@@ -759,7 +785,14 @@ components:
         engineVersion: { type: string }
         createdAt: { type: string, format: date-time }
         history: { $ref: "#/components/schemas/SignalHistory" }
-        aiAnalysis: { $ref: "#/components/schemas/AIAnalysis" }
+        aiAnalysis:
+          allOf:
+            - $ref: "#/components/schemas/AIAnalysis"
+          description: "Resolved to the requester's site language (NEXT_LOCALE cookie), falling back to English."
+        aiAnalyses:
+          type: array
+          items: { $ref: "#/components/schemas/AIAnalysis" }
+          description: "Every generated locale's analysis, unresolved — Phase 13."
 
     SignalHistory:
       type: object
@@ -774,6 +807,7 @@ components:
       type: object
       nullable: true
       properties:
+        locale: { type: string, enum: [en, ru] }
         summary: { type: string }
         reasoning: { type: string }
         riskHighlights: { type: string }

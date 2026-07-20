@@ -3,6 +3,7 @@ import {
   buildTelegramMessage,
   buildSignalEmail,
   buildPushPayload,
+  resolveAiSummary,
   type SignalNotificationInput,
 } from '../templates';
 
@@ -88,5 +89,30 @@ describe('buildPushPayload', () => {
   it('links to the signals page', () => {
     const payload = buildPushPayload(buySignal);
     expect(payload.url).toBe('/dashboard/signals');
+  });
+});
+
+describe('resolveAiSummary', () => {
+  it("returns the recipient's own locale when it exists", () => {
+    const map = new Map([
+      ['en', 'English summary'],
+      ['ru', 'Русское резюме'],
+    ]);
+    expect(resolveAiSummary(map, 'ru')).toBe('Русское резюме');
+  });
+
+  it('falls back to English when the recipient locale has no generated analysis', () => {
+    const map = new Map([['en', 'English summary']]);
+    expect(resolveAiSummary(map, 'ru')).toBe('English summary');
+  });
+
+  it('treats an unrecognized/invalid locale string as the default (English)', () => {
+    const map = new Map([['en', 'English summary']]);
+    expect(resolveAiSummary(map, 'fr')).toBe('English summary');
+  });
+
+  it('returns undefined when no analysis exists in any locale', () => {
+    const map = new Map<string, string>();
+    expect(resolveAiSummary(map, 'en')).toBeUndefined();
   });
 });

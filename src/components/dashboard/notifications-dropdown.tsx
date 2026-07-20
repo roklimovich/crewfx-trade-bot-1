@@ -75,9 +75,18 @@ export function NotificationsDropdown() {
       </button>
 
       {open && (
-        <div className="glass-panel absolute right-0 top-12 w-80 overflow-hidden p-0">
-          <div className="border-b border-white/10 px-4 py-3 text-sm font-medium">
-            Notifications
+        <div
+          className="overlay-panel absolute right-0 top-12 z-[60] w-[min(20rem,calc(100vw-2rem))] overflow-hidden p-0"
+          role="dialog"
+          aria-label="Notifications"
+        >
+          <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+            <span className="text-sm font-medium">Notifications</span>
+            {unreadCount > 0 && (
+              <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-medium text-accent">
+                {unreadCount} new
+              </span>
+            )}
           </div>
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (

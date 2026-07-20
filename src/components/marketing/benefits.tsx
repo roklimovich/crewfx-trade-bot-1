@@ -1,24 +1,20 @@
 import { Check } from 'lucide-react';
-
-const BENEFITS = [
-  'Stop scanning six timeframes by hand — the engine already cross-checked them before you saw the alert.',
-  'Confidence scores mean you can size positions by conviction instead of gut feel.',
-  'Every signal links back to the exact indicator values that produced it, so you can audit any call later.',
-  'Pending accounts stay invisible to the signal feed until an admin approves them — no unvetted access.',
-];
+import { getMessages } from '@/i18n/get-messages';
 
 export function Benefits() {
+  const t = getMessages();
+
   return (
     <section className="border-t border-white/5 py-24">
       <div className="container grid items-center gap-16 lg:grid-cols-2">
         <div>
           <h2 className="font-display text-3xl font-medium tracking-tight sm:text-4xl">
-            Less time watching charts.
+            {t.benefits.heading1}
             <br />
-            More time deciding.
+            {t.benefits.heading2}
           </h2>
           <ul className="mt-8 space-y-5">
-            {BENEFITS.map((benefit) => (
+            {t.benefits.items.map((benefit) => (
               <li key={benefit} className="flex gap-3">
                 <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15">
                   <Check className="h-3 w-3 text-primary" strokeWidth={3} />
@@ -32,7 +28,7 @@ export function Benefits() {
         <div className="glass-panel relative overflow-hidden p-6">
           <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-accent/20 blur-3xl" />
           <p className="mb-4 text-xs uppercase tracking-widest text-muted-foreground">
-            Telegram · SignalForge Bot
+            {t.benefits.telegramLabel}
           </p>
           <div className="space-y-3">
             <div className="rounded-xl rounded-tl-sm bg-white/5 p-4">

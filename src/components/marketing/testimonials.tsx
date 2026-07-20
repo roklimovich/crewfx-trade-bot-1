@@ -1,3 +1,5 @@
+import { getMessages } from '@/i18n/get-messages';
+
 const TESTIMONIALS = [
   {
     quote:
@@ -23,26 +25,28 @@ const TESTIMONIALS = [
 ];
 
 export function Testimonials() {
+  const t = getMessages();
+
   return (
     <section className="border-t border-white/5 py-24">
       <div className="container">
         <h2 className="text-center font-display text-3xl font-medium tracking-tight sm:text-4xl">
-          Traders read the reasoning, not just the arrow
+          {t.testimonials.heading}
         </h2>
 
         <div className="mt-16 grid gap-6 md:grid-cols-3">
-          {TESTIMONIALS.map((t) => (
-            <figure key={t.name} className="glass-panel flex flex-col justify-between p-6">
+          {TESTIMONIALS.map((item) => (
+            <figure key={item.name} className="glass-panel flex flex-col justify-between p-6">
               <blockquote className="text-sm leading-relaxed text-foreground/90">
-                &ldquo;{t.quote}&rdquo;
+                &ldquo;{item.quote}&rdquo;
               </blockquote>
               <figcaption className="mt-6 flex items-center gap-3">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent font-display text-xs font-medium text-white">
-                  {t.initials}
+                  {item.initials}
                 </span>
                 <span>
-                  <span className="block text-sm font-medium">{t.name}</span>
-                  <span className="block text-xs text-muted-foreground">{t.role}</span>
+                  <span className="block text-sm font-medium">{item.name}</span>
+                  <span className="block text-xs text-muted-foreground">{item.role}</span>
                 </span>
               </figcaption>
             </figure>

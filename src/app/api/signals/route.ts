@@ -5,6 +5,7 @@ import {
   parseSignalHistoryFilters,
   buildSignalHistoryWhere,
 } from '@/server/analytics/signal-query';
+import { isLocale, DEFAULT_LOCALE, LOCALE_COOKIE } from '@/i18n/config';
 
 /**
  * GET /api/signals?pair=EUR/USD&direction=BUY&status=WON&dateFrom=2026-07-01&dateTo=2026-07-12
@@ -13,6 +14,12 @@ import {
  * Superset of Phase 8's original filters (pair/status still work as before) — pageSize/page
  * replace the old single `limit` param now that Phase 11 needs real pagination for the signal
  * history table, not just "give me the latest N".
+ *
+ * Phase 13: each signal now carries `aiAnalysis` resolved to the requester's own site language
+ * (read from the NEXT_LOCALE cookie — the same one src/i18n/locale-provider.tsx sets), falling
+ * back to English if that locale doesn't have a generated analysis for some reason. The full,
+ * unresolved `aiAnalyses` array (every generated locale) is also included for any consumer that
+ * wants it directly.
  */
 export async function GET(req: NextRequest) {
   const user = await getAuthenticatedUser(req);
@@ -31,10 +38,13 @@ export async function GET(req: NextRequest) {
     Math.max(1, Number(searchParams.get('pageSize') ?? searchParams.get('limit') ?? 25)),
   );
 
+  const cookieLocale = req.cookies.get(LOCALE_COOKIE)?.value;
+  const requestLocale = isLocale(cookieLocale) ? cookieLocale : DEFAULT_LOCALE;
+
   const [signals, total] = await Promise.all([
     prisma.signal.findMany({
       where,
-      include: { history: true, aiAnalysis: true },
+      include: { history: true, aiAnalyses: true },
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -42,5 +52,14 @@ export async function GET(req: NextRequest) {
     prisma.signal.count({ where }),
   ]);
 
-  return NextResponse.json({ signals, total, page, pageSize });
+  const resolved = signals.map((s) => {
+    const { aiAnalyses, ...rest } = s;
+    const aiAnalysis =
+      aiAnalyses.find((a) => a.locale === requestLocale) ??
+      aiAnalyses.find((a) => a.locale === DEFAULT_LOCALE) ??
+      null;
+    return { ...rest, aiAnalysis, aiAnalyses };
+  });
+
+  return NextResponse.json({ signals: resolved, total, page, pageSize });
 }

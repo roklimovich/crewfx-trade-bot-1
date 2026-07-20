@@ -98,66 +98,68 @@ function UsersPageInner() {
             No users match this filter.
           </p>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-white/10 text-left text-xs text-muted-foreground">
-                <th className="px-5 py-3 font-medium">User</th>
-                <th className="px-5 py-3 font-medium">Status</th>
-                <th className="px-5 py-3 font-medium">Role</th>
-                <th className="px-5 py-3 font-medium">Pocket Option</th>
-                <th className="px-5 py-3 font-medium">Telegram</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => (
-                <tr
-                  key={u.id}
-                  onClick={() => setSelectedUserId(u.id)}
-                  className="cursor-pointer border-b border-white/5 last:border-0 hover:bg-white/[0.03]"
-                >
-                  <td className="px-5 py-3">
-                    <p className="font-medium">{u.name ?? 'Unnamed'}</p>
-                    <p className="text-xs text-muted-foreground">{u.email}</p>
-                  </td>
-                  <td className="px-5 py-3">
-                    <span
-                      className={cn(
-                        'rounded-full px-2 py-0.5 text-xs font-medium',
-                        STATUS_STYLES[u.status],
-                      )}
-                    >
-                      {u.status}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3 text-muted-foreground">{u.role}</td>
-                  <td className="px-5 py-3">
-                    {u.pocketOption ? (
-                      <span className="flex items-center gap-1.5 font-mono text-xs">
-                        {u.pocketOption.verified ? (
-                          <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-                        ) : (
-                          <Clock className="h-3.5 w-3.5 text-accent" />
-                        )}
-                        {u.pocketOption.accountId}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  <td className="px-5 py-3">
-                    {u.telegram ? (
-                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <Send className="h-3.5 w-3.5" />
-                        {u.telegram.username ? `@${u.telegram.username}` : 'Linked'}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-sm">
+              <thead>
+                <tr className="border-b border-white/10 text-left text-xs text-muted-foreground">
+                  <th className="px-5 py-3 font-medium">User</th>
+                  <th className="px-5 py-3 font-medium">Status</th>
+                  <th className="px-5 py-3 font-medium">Role</th>
+                  <th className="px-5 py-3 font-medium">Pocket Option</th>
+                  <th className="px-5 py-3 font-medium">Telegram</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {users.map((u) => (
+                  <tr
+                    key={u.id}
+                    onClick={() => setSelectedUserId(u.id)}
+                    className="cursor-pointer border-b border-white/5 transition-colors last:border-0 focus-within:bg-white/[0.03] hover:bg-white/[0.03]"
+                  >
+                    <td className="px-5 py-3">
+                      <p className="font-medium">{u.name ?? 'Unnamed'}</p>
+                      <p className="text-xs text-muted-foreground">{u.email}</p>
+                    </td>
+                    <td className="px-5 py-3">
+                      <span
+                        className={cn(
+                          'rounded-full px-2 py-0.5 text-xs font-medium',
+                          STATUS_STYLES[u.status],
+                        )}
+                      >
+                        {u.status}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-muted-foreground">{u.role}</td>
+                    <td className="px-5 py-3">
+                      {u.pocketOption ? (
+                        <span className="flex items-center gap-1.5 font-mono text-xs">
+                          {u.pocketOption.verified ? (
+                            <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                          ) : (
+                            <Clock className="h-3.5 w-3.5 text-accent" />
+                          )}
+                          {u.pocketOption.accountId}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3">
+                      {u.telegram ? (
+                        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Send className="h-3.5 w-3.5" />
+                          {u.telegram.username ? `@${u.telegram.username}` : 'Linked'}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
