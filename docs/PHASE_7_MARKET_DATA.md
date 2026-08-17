@@ -1,4 +1,4 @@
-# SignalForge — Phase 7: Market Data Service
+# CrewFX — Phase 7: Market Data Service
 
 ## Two different "TradingView" things, and why both are here
 

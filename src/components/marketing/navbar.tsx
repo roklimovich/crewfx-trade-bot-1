@@ -17,7 +17,7 @@ export function Navbar() {
       <div className="container flex h-16 items-center justify-between">
         <Link href="/" className="flex items-center gap-2 font-display text-lg font-medium">
           <CandlestickChart className="h-5 w-5 text-primary" />
-          SignalForge
+          CrewFX
         </Link>
 
         <nav className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">

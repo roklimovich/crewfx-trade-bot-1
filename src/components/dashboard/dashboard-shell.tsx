@@ -37,7 +37,7 @@ export function DashboardShell({
             <div className="mb-6 flex items-center justify-between">
               <span className="flex items-center gap-2 font-display text-lg font-medium">
                 <CandlestickChart className="h-5 w-5 text-primary" />
-                SignalForge
+                CrewFX
               </span>
               <button onClick={() => setMobileOpen(false)} aria-label="Close menu">
                 <X className="h-5 w-5" />

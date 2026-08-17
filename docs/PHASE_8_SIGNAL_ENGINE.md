@@ -1,4 +1,4 @@
-# SignalForge — Phase 8: Trading Signal Engine
+# CrewFX — Phase 8: Trading Signal Engine
 
 ## What was implemented
 

@@ -1,4 +1,4 @@
-# SignalForge — Phase 3: Authentication & Security
+# CrewFX — Phase 3: Authentication & Security
 
 ## Schema change (heads-up)
 
@@ -94,7 +94,7 @@ account for notifications." I implemented `/api/auth/telegram` to do both, branc
 the Telegram ID is already linked to a user:
 
 - Linked → logs the browser in as that user (this is the "Telegram Login" feature).
-- Not linked → requires an existing SignalForge session and links Telegram to it (this feeds
+- Not linked → requires an existing CrewFX session and links Telegram to it (this feeds
   Phase 10's notification delivery).
 
 If you'd rather these be two separate, more explicit endpoints, that's a quick split later.

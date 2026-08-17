@@ -1,4 +1,4 @@
-# SignalForge — Phase 13: API
+# CrewFX — Phase 13: API
 
 ## What this phase actually is
 
@@ -59,7 +59,7 @@ this is exactly the kind of constraint that only shows up at build time, not in 
 `swagger-dark.css` uses a CSS `filter: invert()` trick to flip Swagger UI's default light theme
 dark, rather than a fully custom Swagger UI theme (which would mean overriding dozens of
 individual class rules). It's a known, common technique — visually decent, not pixel-perfect. If
-you want a fully bespoke dark theme matching SignalForge's exact palette, that's real additional
+you want a fully bespoke dark theme matching CrewFX's exact palette, that's real additional
 CSS work beyond what a documentation-formalization phase justified.
 
 ## API design conventions, documented once instead of scattered

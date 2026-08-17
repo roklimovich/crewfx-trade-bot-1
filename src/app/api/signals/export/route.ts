@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
   return new NextResponse(csv, {
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="signalforge-export-${new Date().toISOString().slice(0, 10)}.csv"`,
+      'Content-Disposition': `attachment; filename="crewfx-export-${new Date().toISOString().slice(0, 10)}.csv"`,
     },
   });
 }

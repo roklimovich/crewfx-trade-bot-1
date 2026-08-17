@@ -1,4 +1,4 @@
-// SignalForge service worker — Web Push handling only (Phase 10).
+// CrewFX service worker — Web Push handling only (Phase 10).
 // Intentionally minimal: no offline caching / app-shell logic, since that's a separate concern
 // this project doesn't need yet.
 
@@ -9,11 +9,11 @@ self.addEventListener('push', (event) => {
   try {
     payload = event.data.json();
   } catch {
-    payload = { title: 'SignalForge', body: event.data.text() };
+    payload = { title: 'CrewFX', body: event.data.text() };
   }
 
   event.waitUntil(
-    self.registration.showNotification(payload.title || 'SignalForge', {
+    self.registration.showNotification(payload.title || 'CrewFX', {
       body: payload.body || '',
       icon: '/icon-192.png',
       badge: '/icon-192.png',

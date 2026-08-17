@@ -1,4 +1,4 @@
-# SignalForge — Phase 1: Architecture
+# CrewFX — Phase 1: Architecture
 
 Informational technical-analysis signal platform for Forex & OTC markets.
 Signals are informational only — the platform never places trades automatically.
@@ -34,7 +34,7 @@ testable in isolation and reusable by a future background worker/cron process, n
 ## Folder Structure
 
 ```
-signalforge/
+crewfx/
 ├── src/
 │   ├── app/
 │   │   ├── (marketing)/          → public landing page (Phase 4)
@@ -80,18 +80,3 @@ signalforge/
 
 Database models, auth logic, UI pages, market-data collection, and the signal engine itself are
 intentionally empty/placeholder right now. Building them now would violate the phase-by-phase plan.
-
-## What You Can Edit Right Now
-
-- `src/styles/globals.css` — the `:root` CSS variables control the entire color theme. Try changing `--primary` / `--accent` hue values to shift the palette.
-- `tailwind.config.ts` — animation timing, border radius, container width.
-- `.env.example` — copy to `.env` and fill in real values once you provision Postgres/Redis.
-- `package.json` — dependency versions if you want to pin differently.
-
-## Next Step
-
-Phase 2 — Database Design: full Prisma schema (Users, Roles, Sessions, Pocket Option IDs, Telegram
-Accounts, Signals, Signal History, Indicators, Market Data, Notifications, AI Analysis, Logs,
-Settings, Admin Actions) with relationships, indexes, and constraints.
-
-**Reply "continue" (or request changes to Phase 1) before I start Phase 2.**

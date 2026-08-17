@@ -1,5 +1,5 @@
 /* Swagger UI ships light-themed by default — these overrides keep the API docs page
-   visually consistent with SignalForge's dark UI without reimplementing the whole widget. */
+   visually consistent with CrewFX's dark UI without reimplementing the whole widget. */
 
 .swagger-ui-dark-wrapper {
   background: hsl(222 47% 5%);

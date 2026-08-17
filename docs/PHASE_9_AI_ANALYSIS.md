@@ -1,4 +1,4 @@
-# SignalForge — Phase 9: AI Analysis Module
+# CrewFX — Phase 9: AI Analysis Module
 
 ## The core design constraint: support, never replace
 

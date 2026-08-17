@@ -52,22 +52,23 @@ export async function dispatchSignalNotifications(signalId: string): Promise<Dis
   if (!signal) {
     return { usersNotified: 0, channelResults: {} };
   }
+  const resolvedSignal = signal;
 
   const summaryByLocale = new Map(
-    signal.aiAnalyses.map(
+    resolvedSignal.aiAnalyses.map(
       (a: { locale: string; summary: string }) => [a.locale, a.summary] as [string, string],
     ),
   ) as Map<string, string>;
 
   function buildSignalInputFor(userLocale: string): SignalNotificationInput {
     return {
-      pair: signal.pair,
-      direction: signal.direction,
-      entryPrice: signal.entryPrice,
-      confidenceScore: signal.confidenceScore,
-      riskLevel: signal.riskLevel,
-      timeframe: signal.timeframe,
-      technicalSummary: signal.technicalSummary,
+      pair: resolvedSignal.pair,
+      direction: resolvedSignal.direction,
+      entryPrice: resolvedSignal.entryPrice,
+      confidenceScore: resolvedSignal.confidenceScore,
+      riskLevel: resolvedSignal.riskLevel,
+      timeframe: resolvedSignal.timeframe,
+      technicalSummary: resolvedSignal.technicalSummary,
       aiSummary: resolveAiSummary(summaryByLocale, userLocale),
     };
   }

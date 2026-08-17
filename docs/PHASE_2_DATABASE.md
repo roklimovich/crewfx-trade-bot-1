@@ -1,4 +1,4 @@
-# SignalForge — Phase 2: Database Design
+# CrewFX — Phase 2: Database Design
 
 ## Design principles
 
@@ -48,7 +48,7 @@
 - `PocketOptionAccount` has a compound unique on `(userId, accountId)` — a user can submit more
   than one Pocket Option ID, but not the same one twice.
 - `TelegramAccount.telegramId` and `.chatId` are both globally unique — one Telegram account can't
-  be linked to two SignalForge users.
+  be linked to two CrewFX users.
 - Destructive cascades are scoped deliberately: deleting a `User` cascades their `Session`s,
   `PocketOptionAccount`s, and `TelegramAccount` (things that only make sense tied to that user),
   but `SetNull`s on `Log`, `Notification`, and `AdminAction.targetUser` — you don't want to lose

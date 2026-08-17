@@ -62,7 +62,7 @@ export function AdminShell({ user, children }: { user: DashboardUser; children: 
       <aside className="hidden w-64 shrink-0 flex-col border-r border-white/5 bg-white/[0.02] lg:flex">
         <div className="flex h-16 items-center gap-2 border-b border-white/5 px-6 font-display text-lg font-medium">
           <CandlestickChart className="h-5 w-5 text-primary" />
-          SignalForge
+          CrewFX
           <span className="ml-auto flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium text-accent">
             <ShieldCheck className="h-3 w-3" />
             {user.role}
@@ -78,7 +78,7 @@ export function AdminShell({ user, children }: { user: DashboardUser; children: 
             <div className="mb-6 flex items-center justify-between">
               <span className="flex items-center gap-2 font-display text-lg font-medium">
                 <CandlestickChart className="h-5 w-5 text-primary" />
-                SignalForge
+                CrewFX
               </span>
               <button onClick={() => setMobileOpen(false)} aria-label="Close menu">
                 <X className="h-5 w-5" />

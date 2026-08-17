@@ -1,4 +1,4 @@
-# SignalForge — Combined Update: Theme, i18n, Admin Kick, AI Localization
+# CrewFX — Combined Update: Theme, i18n, Admin Kick, AI Localization
 
 This wasn't a numbered roadmap phase — it's a batch of specific requests handled together. Phase
 14 (Testing) resumes next.

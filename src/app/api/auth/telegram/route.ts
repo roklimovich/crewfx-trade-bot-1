@@ -47,13 +47,13 @@ export async function POST(req: NextRequest) {
   }
 
   // No existing link — this only makes sense if the browser already has a
-  // SignalForge session; we link Telegram to that account.
+  // CrewFX session; we link Telegram to that account.
   const currentUser = await getAuthenticatedUser(req);
   if (!currentUser) {
     return NextResponse.json(
       {
         error:
-          'No SignalForge account is linked to this Telegram account. Log in first, then link Telegram from your dashboard.',
+          'No CrewFX account is linked to this Telegram account. Log in first, then link Telegram from your dashboard.',
       },
       { status: 404 },
     );

@@ -22,16 +22,16 @@ export const en = {
     titleLine1: 'Signals that show',
     titleHighlight: 'their work.',
     description:
-      'SignalForge scores every pair on trend, momentum, and volatility, then only speaks up when multiple indicators agree. Every signal ships with the reasoning behind it — not just a direction and a countdown.',
+      'CrewFX scores every pair on trend, momentum, and volatility, then only speaks up when multiple indicators agree. Every signal ships with the reasoning behind it — not just a direction and a countdown.',
     ctaPrimary: 'Start reading signals',
     ctaSecondary: 'See how it works',
     disclaimer:
-      'Informational signals only. SignalForge never places trades — every decision stays yours.',
+      'Informational signals only. CrewFX never places trades — every decision stays yours.',
   },
   features: {
     heading: 'Built to say less, and mean it',
     subheading:
-      'Most signal feeds optimize for volume. SignalForge optimizes for the moments actually worth acting on.',
+      'Most signal feeds optimize for volume. CrewFX optimizes for the moments actually worth acting on.',
     items: [
       {
         title: 'Multi-indicator confirmation',
@@ -74,7 +74,7 @@ export const en = {
       'Every signal links back to the exact indicator values that produced it, so you can audit any call later.',
       'Pending accounts stay invisible to the signal feed until an admin approves them — no unvetted access.',
     ],
-    telegramLabel: 'Telegram · SignalForge Bot',
+    telegramLabel: 'Telegram · CrewFX Bot',
   },
   stats: {
     items: [
@@ -142,7 +142,7 @@ export const en = {
     items: [
       {
         q: 'Is this financial advice?',
-        a: 'No. SignalForge surfaces technical-analysis signals for informational purposes only. It never places trades on your behalf, and every entry, exit, and position size is a decision you make yourself.',
+        a: 'No. CrewFX surfaces technical-analysis signals for informational purposes only. It never places trades on your behalf, and every entry, exit, and position size is a decision you make yourself.',
       },
       {
         q: 'How is the confidence score calculated?',
@@ -153,7 +153,7 @@ export const en = {
         a: "Submitting your Pocket Option account ID lets an admin verify your account before signals unlock. It's a verification step, never a way for us to access or trade on your broker account — we only ever ask for the ID, never credentials.",
       },
       {
-        q: 'Which markets does SignalForge cover?',
+        q: 'Which markets does CrewFX cover?',
         a: 'Major, minor, and exotic Forex pairs plus commonly traded OTC instruments, across seven timeframes from M1 to D1.',
       },
       {

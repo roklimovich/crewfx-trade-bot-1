@@ -17,7 +17,7 @@ export function Sidebar({ user }: { user: DashboardUser }) {
     <aside className="hidden w-64 shrink-0 flex-col border-r border-white/5 bg-white/[0.02] lg:flex">
       <div className="flex h-16 items-center gap-2 border-b border-white/5 px-6 font-display text-lg font-medium">
         <CandlestickChart className="h-5 w-5 text-primary" />
-        SignalForge
+        CrewFX
       </div>
 
       <nav className="flex-1 space-y-1 p-4">

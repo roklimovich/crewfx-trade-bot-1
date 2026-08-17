@@ -91,7 +91,7 @@ export function PushNotificationsSection() {
     <section className="glass-panel p-6">
       <h2 className="font-display text-lg font-medium">Push notifications</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Get a signal alert even when SignalForge isn&rsquo;t open in a tab.
+        Get a signal alert even when CrewFX isn&rsquo;t open in a tab.
       </p>
 
       <div className="mt-5">

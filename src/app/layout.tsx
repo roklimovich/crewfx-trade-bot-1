@@ -23,16 +23,16 @@ const mono = JetBrains_Mono({
   display: 'swap',
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://signalforge.app';
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://crewfx.app';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: 'SignalForge — Technical-Analysis Signals for Forex & OTC',
-    template: '%s · SignalForge',
+    default: 'CrewFX — Technical-Analysis Signals for Forex & OTC',
+    template: '%s · CrewFX',
   },
   description:
-    'SignalForge reads market structure across Forex and OTC pairs and surfaces rule-based, confidence-scored trade signals with plain-language reasoning. Informational only — you make every trading decision.',
+    'CrewFX reads market structure across Forex and OTC pairs and surfaces rule-based, confidence-scored trade signals with plain-language reasoning. Informational only — you make every trading decision.',
   keywords: [
     'forex signals',
     'otc trading signals',
@@ -41,16 +41,16 @@ export const metadata: Metadata = {
     'signal engine',
   ],
   openGraph: {
-    title: 'SignalForge — Technical-Analysis Signals for Forex & OTC',
+    title: 'CrewFX — Technical-Analysis Signals for Forex & OTC',
     description:
       'Rule-based, confidence-scored trade signals with plain-language reasoning. Informational only.',
     url: siteUrl,
-    siteName: 'SignalForge',
+    siteName: 'CrewFX',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'SignalForge — Technical-Analysis Signals for Forex & OTC',
+    title: 'CrewFX — Technical-Analysis Signals for Forex & OTC',
     description: 'Rule-based, confidence-scored trade signals with plain-language reasoning.',
   },
   robots: { index: true, follow: true },

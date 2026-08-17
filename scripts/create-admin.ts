@@ -9,7 +9,7 @@ function parseArg(name: string): string | undefined {
   return arg?.slice(prefix.length);
 }
 
-function usage(): void {
+function usage(): never {
   console.error(`
 Usage:
   npx tsx scripts/create-admin.ts --email=admin@example.com --password=YourP@ssw0rd --name="Admin User"

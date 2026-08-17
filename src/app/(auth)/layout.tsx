@@ -12,7 +12,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           className="mb-8 flex items-center justify-center gap-2 font-display text-lg font-medium"
         >
           <CandlestickChart className="h-5 w-5 text-primary" />
-          SignalForge
+          CrewFX
         </Link>
         <div className="glass-panel p-8">{children}</div>
       </div>

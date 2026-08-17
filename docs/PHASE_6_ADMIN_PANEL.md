@@ -1,4 +1,4 @@
-# SignalForge — Phase 6: Admin Panel
+# CrewFX — Phase 6: Admin Panel
 
 ## Schema change (heads-up)
 

@@ -10,7 +10,7 @@ export function generateTwoFactorSecret(): string {
 
 /** Renders a scannable QR code (as a data URL) for authenticator apps. */
 export async function generateTwoFactorQrCode(email: string, secret: string): Promise<string> {
-  const otpauthUrl = authenticator.keyuri(email, 'SignalForge', secret);
+  const otpauthUrl = authenticator.keyuri(email, 'CrewFX', secret);
   return QRCode.toDataURL(otpauthUrl);
 }
 

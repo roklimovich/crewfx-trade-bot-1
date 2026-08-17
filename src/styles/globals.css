@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* SignalForge dark / glassmorphism theme tokens
+/* CrewFX dark / glassmorphism theme tokens
    Deep-blue-on-near-black trading-platform aesthetic — electric blue primary, cyan accent. */
 :root {
   --background: 222 47% 5%;

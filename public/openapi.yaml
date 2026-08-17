@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
-  title: SignalForge API
+  title: CrewFX API
   version: "1.0.0"
   description: |
-    REST API for SignalForge — technical-analysis trading signals for Forex and OTC markets.
+    REST API for CrewFX — technical-analysis trading signals for Forex and OTC markets.
 
     ## Authentication
     Two ways to authenticate, both accepted by every protected endpoint:
@@ -22,7 +22,7 @@ info:
     ## Pagination
     List endpoints that support pagination accept `page` (1-indexed) and `pageSize` query params, and return `{ items or resource-name, total, page, pageSize }`.
   contact:
-    name: SignalForge
+    name: CrewFX
 servers:
   - url: /api
     description: Same-origin (this app's own frontend)

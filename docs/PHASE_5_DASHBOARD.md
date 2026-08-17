@@ -1,4 +1,4 @@
-# SignalForge — Phase 5: Dashboard UI (+ Login/Register)
+# CrewFX — Phase 5: Dashboard UI (+ Login/Register)
 
 ## Scope note
 

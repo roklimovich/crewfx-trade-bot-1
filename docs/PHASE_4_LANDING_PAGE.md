@@ -1,4 +1,4 @@
-# SignalForge — Phase 4: Landing Page
+# CrewFX — Phase 4: Landing Page
 
 ## Design direction
 

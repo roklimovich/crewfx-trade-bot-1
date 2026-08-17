@@ -6,7 +6,7 @@ import '@/styles/swagger-dark.css';
 
 export const metadata: Metadata = {
   title: 'API Documentation',
-  description: 'Interactive REST API reference for SignalForge.',
+  description: 'Interactive REST API reference for CrewFX.',
 };
 
 export default function ApiDocsPage() {
@@ -18,7 +18,7 @@ export default function ApiDocsPage() {
           className="flex items-center gap-2 font-display text-lg font-medium text-foreground"
         >
           <CandlestickChart className="h-5 w-5 text-primary" />
-          SignalForge API
+          CrewFX API
         </Link>
       </div>
       <ApiDocsLazy />
