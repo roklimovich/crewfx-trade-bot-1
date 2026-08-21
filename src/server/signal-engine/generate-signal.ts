@@ -1,4 +1,4 @@
-import type { Timeframe } from '@prisma/client';
+import type { Prisma, Timeframe } from '@prisma/client';
 import { prisma } from '@/server/db/prisma';
 import { logEvent } from '@/server/security/audit-log';
 import { CANDLE_LOOKBACK } from '../market-data/pairs';
@@ -17,6 +17,7 @@ import { buildIndicatorSnapshot } from './build-snapshot';
 import { calculateExpiration } from './expiration';
 import { analyzeSignal } from '../ai/analyze-signal';
 import { dispatchSignalNotifications } from '../notifications/dispatch';
+import { buildStrategySnapshot } from './strategy-snapshot';
 
 export const ENGINE_VERSION = 'rule-engine-v1';
 const DEFAULT_MIN_CONFIDENCE = 65; // matches the seeded Setting; overridden by DB value when present
@@ -57,13 +58,15 @@ export async function generateSignalForPairTimeframe(
 
   const candleRows = await prisma.marketData.findMany({
     where: { pair, timeframe },
-    orderBy: { timestamp: 'asc' },
+    // Pull the newest window first. `take` with ascending order silently selected the first 200
+    // candles ever stored once the table grew past the initial bootstrap window.
+    orderBy: { timestamp: 'desc' },
     take: CANDLE_LOOKBACK,
   });
   if (candleRows.length < 20) {
     return { pair, timeframe, generated: false, reason: 'Not enough candle history yet.' };
   }
-  const candles: Candle[] = candleRows.map((c) => ({
+  const candles: Candle[] = candleRows.reverse().map((c) => ({
     timestamp: c.timestamp,
     open: c.open,
     high: c.high,
@@ -105,6 +108,13 @@ export async function generateSignalForPairTimeframe(
       decision.contributingRuleNames.some((name) => ruleUsesIndicatorType(name, row.type)),
     )
     .map((row) => ({ id: row.id }));
+  const analysisSnapshot = buildStrategySnapshot(
+    closePrice,
+    candles,
+    snapshot,
+    decision,
+    directionalRules,
+  );
 
   const signal = await prisma.signal.create({
     data: {
@@ -112,12 +122,13 @@ export async function generateSignalForPairTimeframe(
       direction: decision.direction,
       entryPrice: closePrice,
       confidenceScore: decision.confidenceScore,
-      expirationTime: calculateExpiration(timeframe),
+      expirationTime: calculateExpiration(timeframe, decision.riskLevel),
       technicalSummary: decision.technicalSummary,
       riskLevel: decision.riskLevel,
       timeframe,
       status: 'ACTIVE',
       engineVersion: ENGINE_VERSION,
+      analysisSnapshot: analysisSnapshot as unknown as Prisma.InputJsonValue,
       indicatorsUsed: { connect: matchingIndicatorIds },
       history: { create: { outcome: 'PENDING' } },
     },

@@ -44,7 +44,12 @@ export async function GET(req: NextRequest) {
   const [signals, total] = await Promise.all([
     prisma.signal.findMany({
       where,
-      include: { history: true, aiAnalyses: true },
+      include: {
+        history: true,
+        aiAnalyses: true,
+        // Feedback is private to its author: a user must not see another trader's loss report.
+        feedback: { where: { userId: user.sub }, select: { verdict: true } },
+      },
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -53,12 +58,17 @@ export async function GET(req: NextRequest) {
   ]);
 
   const resolved = signals.map((s) => {
-    const { aiAnalyses, ...rest } = s;
+    const { aiAnalyses, feedback, ...rest } = s;
     const aiAnalysis =
       aiAnalyses.find((a) => a.locale === requestLocale) ??
       aiAnalyses.find((a) => a.locale === DEFAULT_LOCALE) ??
       null;
-    return { ...rest, aiAnalysis, aiAnalyses };
+    return {
+      ...rest,
+      aiAnalysis,
+      aiAnalyses,
+      reportedLoss: feedback.some((item) => item.verdict === 'LOST'),
+    };
   });
 
   return NextResponse.json({ signals: resolved, total, page, pageSize });

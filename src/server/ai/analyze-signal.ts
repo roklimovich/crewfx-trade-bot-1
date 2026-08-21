@@ -60,6 +60,9 @@ export async function analyzeSignal(signalId: string): Promise<AnalyzeSignalResu
       riskLevel: signal.riskLevel,
       timeframe: signal.timeframe,
       technicalSummary: signal.technicalSummary,
+      strategyEvidence: signal.analysisSnapshot
+        ? JSON.stringify(signal.analysisSnapshot)
+        : undefined,
     };
 
     const generated: Locale[] = [];

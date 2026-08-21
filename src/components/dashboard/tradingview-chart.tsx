@@ -61,7 +61,7 @@ export function TradingViewChart({ pair, timeframe, height = 680 }: TradingViewC
         enable_publishing: false,
         hide_top_toolbar: false,
         save_image: false,
-        studies: ['RSI@tv-basicstudies', 'MACD@tv-basicstudies'],
+        studies: ['EMA@tv-basicstudies', 'RSI@tv-basicstudies', 'MACD@tv-basicstudies'],
         backgroundColor: 'rgba(7, 10, 19, 1)',
         gridColor: 'rgba(255, 255, 255, 0.06)',
         container_id: containerId,

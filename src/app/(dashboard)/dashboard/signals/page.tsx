@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Search, Download, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { SignalFeed } from '@/components/dashboard/signal-feed';
 import { apiFetch } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import { useTranslations } from '@/i18n/locale-provider';
 import type { SignalFeedItem } from '@/types/signal';
+import { SignalTradingViewSection } from '@/components/dashboard/signal-tradingview-section';
+import { LiveSignalBoard } from '@/components/dashboard/live-signal-board';
 
 const STATUS_FILTERS = ['ALL', 'ACTIVE', 'WON', 'LOST', 'EXPIRED'] as const;
 const PAGE_SIZE = 20;
@@ -20,6 +22,13 @@ export default function SignalsPage() {
   const [signals, setSignals] = useState<SignalFeedItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const hasLoaded = useRef(false);
+  const [marketStatus, setMarketStatus] = useState<{
+    providerConfigured: boolean;
+    candleCount: number;
+    indicatorCount: number;
+    ready: boolean;
+  } | null>(null);
 
   const buildParams = useCallback(() => {
     const params = new URLSearchParams();
@@ -31,21 +40,43 @@ export default function SignalsPage() {
     return params;
   }, [status, pair, search, page]);
 
-  const load = useCallback(() => {
-    setLoading(true);
-    apiFetch<{ signals: SignalFeedItem[]; total: number }>(
-      `/api/signals?${buildParams().toString()}`,
-    )
-      .then((res) => {
-        setSignals(res.signals);
-        setTotal(res.total);
-      })
-      .finally(() => setLoading(false));
-  }, [buildParams]);
+  const load = useCallback(
+    (background = false) => {
+      if (!background && !hasLoaded.current) setLoading(true);
+      apiFetch<{ signals: SignalFeedItem[]; total: number }>(
+        `/api/signals?${buildParams().toString()}`,
+      )
+        .then((res) => {
+          setSignals(res.signals);
+          setTotal(res.total);
+          hasLoaded.current = true;
+        })
+        .finally(() => setLoading(false));
+    },
+    [buildParams],
+  );
 
   useEffect(() => {
     const t = setTimeout(load, 250); // light debounce, mainly for the search box
     return () => clearTimeout(t);
+  }, [load]);
+
+  useEffect(() => {
+    apiFetch<{
+      providerConfigured: boolean;
+      candleCount: number;
+      indicatorCount: number;
+      ready: boolean;
+    }>('/api/market-data/status')
+      .then(setMarketStatus)
+      .catch(() => {});
+  }, []);
+
+  // The engine can create an M1 signal while this page is open. Polling complements the
+  // notification stream and also updates users who have browser notifications disabled.
+  useEffect(() => {
+    const interval = window.setInterval(() => load(true), 15_000);
+    return () => window.clearInterval(interval);
   }, [load]);
 
   useEffect(() => {
@@ -114,6 +145,29 @@ export default function SignalsPage() {
           />
         </div>
       </div>
+
+      {marketStatus && !marketStatus.ready && (
+        <div className="rounded-xl border border-accent/30 bg-accent/5 p-4 text-sm">
+          <p className="font-medium">Market data is not ready yet</p>
+          {!marketStatus.providerConfigured ? (
+            <p className="mt-1 text-muted-foreground">
+              An administrator must set <code>MARKET_DATA_API_KEY</code> in the deployment
+              environment, then run the market-data ingestion job. No placeholder signals are shown
+              because the engine needs real prices.
+            </p>
+          ) : (
+            <p className="mt-1 text-muted-foreground">
+              Collecting history: {marketStatus.candleCount} candles and{' '}
+              {marketStatus.indicatorCount} indicators stored. Signals can start after each
+              pair/timeframe has enough recent candles.
+            </p>
+          )}
+        </div>
+      )}
+
+      <LiveSignalBoard signals={signals} />
+
+      <SignalTradingViewSection signals={signals} />
 
       {loading ? (
         <div className="flex h-40 items-center justify-center text-muted-foreground">

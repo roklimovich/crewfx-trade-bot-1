@@ -15,7 +15,7 @@
   "crons": [
     {
       "path": "/api/market-data/ingest",
-      "schedule": "*/5 * * * *"
+      "schedule": "* * * * *"
     }
   ]
 }

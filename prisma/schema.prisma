@@ -40,6 +40,7 @@ model User {
   pocketOptionAccounts PocketOptionAccount[]
   pushSubscriptions    PushSubscription[]
   sessions             Session[]
+  signalFeedback       SignalFeedback[]
   settingsUpdated      Setting[]
   telegramAccount      TelegramAccount?
   referredBy           User?                 @relation("Referrals", fields: [referredById], references: [id])
@@ -146,16 +147,37 @@ model Signal {
   timeframe        Timeframe
   status           SignalStatus    @default(PENDING)
   engineVersion    String
+  /// Immutable strategy evidence (zones and rule rationales) captured when the signal fires.
+  analysisSnapshot Json?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   aiAnalyses       AIAnalysis[]
   notifications    Notification[]
   history          SignalHistory?
   indicatorsUsed   Indicator[]     @relation("SignalIndicators")
+  feedback         SignalFeedback[]
 
   @@index([pair, createdAt])
   @@index([status])
   @@map("signals")
+}
+
+/// A trader's own report is separate from the reference market outcome: their fill, spread, or
+/// manual exit can differ from the engine's entry and expiry prices.
+model SignalFeedback {
+  id        String              @id @default(cuid())
+  signalId  String
+  userId    String
+  verdict   UserSignalVerdict
+  note      String?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  signal    Signal              @relation(fields: [signalId], references: [id], onDelete: Cascade)
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([signalId, userId])
+  @@index([verdict, createdAt])
+  @@map("signal_feedback")
 }
 
 /// Outcome tracking, kept separate from Signal so the signal record stays
@@ -323,6 +345,11 @@ enum SignalOutcome {
   WIN
   LOSS
   BREAK_EVEN
+}
+
+enum UserSignalVerdict {
+  BAD_SIGNAL
+  LOST
 }
 
 enum IndicatorType {

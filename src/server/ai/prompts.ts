@@ -8,6 +8,7 @@ export interface SignalAnalysisContext {
   riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
   timeframe: string;
   technicalSummary: string; // built directly from the rule engine's own rationale (Phase 8)
+  strategyEvidence?: string;
 }
 
 const LANGUAGE_NAMES: Record<Locale, string> = {
@@ -49,6 +50,7 @@ export function buildAnalysisPrompt(
 - Engine confidence score: ${ctx.confidenceScore}%
 - Risk level: ${ctx.riskLevel}
 - Technical summary from the rule engine: ${ctx.technicalSummary}
+${ctx.strategyEvidence ? `- Strategy zones used by the engine: ${ctx.strategyEvidence}` : ''}
 
 Explain this signal for a trader, following your instructions exactly. Remember: respond in ${LANGUAGE_NAMES[locale]}.`;
 

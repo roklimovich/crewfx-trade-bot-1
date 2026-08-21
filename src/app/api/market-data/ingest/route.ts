@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ingestAll } from '@/server/market-data/ingest';
 import { generateAllSignals } from '@/server/signal-engine/generate-all';
+import { timeframesDueAt } from '@/server/market-data/pairs';
 import { requireAdmin } from '@/server/auth/admin-guard';
 import { logEvent } from '@/server/security/audit-log';
 
@@ -46,8 +47,12 @@ async function runIngestion(req: NextRequest, requireCronOrAdmin: boolean) {
   }
 
   const startedAt = Date.now();
-  const ingestResults = await ingestAll();
-  const signalResults = await generateAllSignals();
+  const dueTimeframes = timeframesDueAt();
+  const ingestResults = await ingestAll(undefined, dueTimeframes);
+  // Evaluate only intervals whose newest candle was just refreshed. This prevents repeatedly
+  // evaluating unchanged H1/H4/D1 data every minute and keeps provider/API work proportional
+  // to the real-time cadence.
+  const signalResults = await generateAllSignals(undefined, dueTimeframes);
   const durationMs = Date.now() - startedAt;
 
   const ingestSucceeded = ingestResults.filter((r) => !r.error).length;
@@ -60,6 +65,7 @@ async function runIngestion(req: NextRequest, requireCronOrAdmin: boolean) {
   );
 
   return NextResponse.json({
+    dueTimeframes,
     ingest: { results: ingestResults, succeeded: ingestSucceeded, total: ingestResults.length },
     signals: { results: signalResults, generated: signalsGenerated, total: signalResults.length },
     durationMs,
